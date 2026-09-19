@@ -31,10 +31,14 @@ class Application(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     scheme_code = Column(String(50), default="PM_KISAN", nullable=False)
-    status = Column(String(50), default="SUBMITTED", nullable=False)
+    status = Column(String(50), default="UNDER_REVIEW", nullable=False)
     risk_score = Column(Integer, nullable=True)
+    confidence_score = Column(Integer, nullable=True)     # 0 to 100%
     confidence_level = Column(String(20), nullable=True)  # Low, Medium, High
     recommended_action = Column(String(255), nullable=True)
+    officer_decision = Column(String(50), nullable=True)  # APPROVE, REJECT, HOLD, REQUEST_DOCUMENTS, ESCALATE
+    officer_remarks = Column(Text, nullable=True)
+    officer_decided_at = Column(DateTime, nullable=True)
     submitted_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 
@@ -86,6 +90,7 @@ class AnomalyReport(Base):
     id = Column(Integer, primary_key=True, index=True)
     application_id = Column(Integer, ForeignKey("applications.id"), unique=True, nullable=False)
     risk_score = Column(Integer, nullable=False)  # 0 to 100
+    confidence_score = Column(Integer, default=85, nullable=False)  # 0 to 100%
     confidence_level = Column(String(20), nullable=False)  # Low, Medium, High
     recommended_action = Column(String(255), nullable=False)
     rationale = Column(Text, nullable=False)

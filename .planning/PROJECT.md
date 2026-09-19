@@ -25,18 +25,21 @@ Deterministic and statistical anomaly detection on agricultural subsidy applicat
 
 - [ ] Farmer registration, authentication (JWT, bcrypt), and profile management
 - [ ] Multi-section PM-KISAN application form (Personal, OTP verification, Identity/Aadhaar tokenization, Bank details, Land details, Document upload, Self-declaration)
-- [ ] Secure file storage for land ownership documents (PDF, JPG, PNG <= 5MB)
-- [ ] 7 modular anomaly detection engines:
+- [x] Secure file storage for land ownership documents (PDF, JPG, PNG <= 5MB)
+- [x] 8 modular anomaly detection engines:
   - Identity Engine (e-KYC failure, OTP unverified, duplicate Aadhaar, mobile bulk usage)
   - Land Engine (missing parcel, owner Aadhaar mismatch, owner fuzzy name mismatch, non-agricultural land, inactive ownership, area mismatch)
   - Bank Engine (invalid IFSC, inactive account, penny drop failed, bank name fuzzy mismatch, shared bank account)
   - Exclusion Engine (income tax payee, government employee, pensioner, practicing professional, institutional landholder, deceased applicant)
-  - Duplicate Parcel Engine (same parcel + same mobile, multiple applicants per parcel, over-claimed parcels)
+  - Duplicate Parcel Engine (same parcel + same mobile, multiple applicants per parcel, syndicate claims)
   - Statistical & Geographic Engine (abnormal application volume per village vs historical baseline)
   - Temporal Spike Engine (application surges prior to installment release or cutoff dates)
-- [ ] Risk scoring (0-100), confidence level (Low/Medium/High), and human-readable explainable rationale generator
+  - Isolation Forest Machine Learning Engine (unsupervised multivariate outlier detection across joint distributions of land area, discrepancy %, age, fuzzy name scores, and density)
+- [x] Decoupled Risk scoring (0-100 threat severity), Confidence assessment (0-100% evidential certainty), and human-readable explainable rationale generator
+- [x] Officer Final Decision workflow (APPROVE, HOLD, REJECT, REQUEST_DOCUMENTS, ESCALATE) with mandatory written remarks and audit logging — no automatic clearance or disbursement
+- [x] Synthetic Ground-Truth Evaluation Service benchmarking Precision, Recall, F1-Score, Confusion Matrix, Specificity, and FPR
 - [ ] Farmer applicant dashboard displaying status and user-facing action messages (without exposing internal risk scores)
-- [ ] Admin Anomaly Review Dashboard with KPI summary, risk score sorting, status/district filtering, full anomaly report view, evidence inspector, and decision workflow (APPROVE, HOLD, REJECT, REQUEST_DOCUMENTS, ESCALATE)
+- [ ] Admin Anomaly Review Dashboard with KPI summary, risk score sorting, status/district filtering, full anomaly report view, evidence inspector, and decision workflow
 - [ ] Audit logging for all administrative decisions and remarks
 - [ ] CSV export of anomaly reports and flagged applications
 - [ ] Comprehensive seed data generator (Admin, normal user, 20+ land records, bank master, exclusion master, village profile master, event calendar, and 20 sample applications covering all risk tiers)

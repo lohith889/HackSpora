@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, Application, AnomalyFlag
+from app.models import User, Application, AnomalyFlag, AnomalyReport
 from app.auth import get_current_user
 from app.utils import get_citizen_status_message
 from app.schemas import (
@@ -17,6 +17,9 @@ from app.schemas import (
 )
 from app.services import application_service
 from app.services.anomaly_pipeline import run_pipeline
+from app.services.risk_scorer import compute_risk_score, get_recommended_action
+from app.services.confidence_engine import compute_confidence
+from app.services.rationale_generator import generate_rationale
 
 application_router = APIRouter(prefix="/applications", tags=["Applications"])
 
@@ -97,11 +100,12 @@ async def submit_pm_kisan_application(
 
     details = application.pm_kisan_details
 
-    # ── Run Anomaly Detection Pipeline (all 7 engines) ──────────────────────
+    # ── Run Anomaly Detection Pipeline (all 8 engines) ──────────────────────
     if details:
         try:
             pipeline_result = run_pipeline(details, db)
-            # Persist each flag as an AnomalyFlag row (raw flags — scoring in Phase 4)
+
+            # 1. Persist individual anomaly flags
             for flag in pipeline_result.flags:
                 db_flag = AnomalyFlag(
                     application_id=application.id,
@@ -112,7 +116,39 @@ async def submit_pm_kisan_application(
                     evidence_json=flag.evidence_json or {},
                 )
                 db.add(db_flag)
+
+            # 2. Compute Decoupled Risk & Confidence Scores
+            risk_score = compute_risk_score(pipeline_result.flags)
+            confidence_score, confidence_level = compute_confidence(pipeline_result.flags, details, db)
+            recommended_action = get_recommended_action(risk_score, pipeline_result.flags)
+            rationale = generate_rationale(
+                risk_score=risk_score,
+                confidence_score=confidence_score,
+                confidence_level=confidence_level,
+                recommended_action=recommended_action,
+                flags=pipeline_result.flags,
+            )
+
+            # 3. Persist Anomaly Report Dossier
+            anomaly_report = AnomalyReport(
+                application_id=application.id,
+                risk_score=risk_score,
+                confidence_score=confidence_score,
+                confidence_level=confidence_level,
+                recommended_action=recommended_action,
+                rationale=rationale,
+            )
+            db.add(anomaly_report)
+
+            # 4. Update Application triage summary (Status remains SUBMITTED pending Officer Final Decision)
+            application.risk_score = risk_score
+            application.confidence_score = confidence_score
+            application.confidence_level = confidence_level
+            application.recommended_action = recommended_action
+            application.status = "SUBMITTED"
+
             db.commit()
+            db.refresh(application)
         except Exception:
             # Pipeline errors must never block the citizen's submission response
             db.rollback()
@@ -226,6 +262,7 @@ def get_application_details(
     if app.anomaly_report:
         anomaly_rep = AnomalyReportResponse(
             risk_score=app.anomaly_report.risk_score,
+            confidence_score=app.anomaly_report.confidence_score or 85,
             confidence_level=app.anomaly_report.confidence_level,
             recommended_action=app.anomaly_report.recommended_action,
             rationale=app.anomaly_report.rationale,
@@ -248,8 +285,12 @@ def get_application_details(
         scheme_code=app.scheme_code,
         status=app.status,
         risk_score=app.risk_score,
+        confidence_score=app.confidence_score,
         confidence_level=app.confidence_level,
         recommended_action=app.recommended_action,
+        officer_decision=app.officer_decision,
+        officer_remarks=app.officer_remarks,
+        officer_decided_at=app.officer_decided_at,
         submitted_at=app.submitted_at,
         created_at=app.created_at,
         farmer_name=details.farmer_name,

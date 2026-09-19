@@ -18,6 +18,7 @@ from app.services import (
     duplicate_parcel_engine,
     statistical_engine,
     temporal_engine,
+    isolation_forest_engine,
 )
 
 ENGINES = [
@@ -28,6 +29,7 @@ ENGINES = [
     ("duplicate_parcel_engine",duplicate_parcel_engine),
     ("statistical_engine",     statistical_engine),
     ("temporal_engine",        temporal_engine),
+    ("isolation_forest_engine",isolation_forest_engine),
 ]
 
 

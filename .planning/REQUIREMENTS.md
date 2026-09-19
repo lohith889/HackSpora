@@ -32,12 +32,15 @@
 - [x] **ENG-05**: Duplicate Parcel Engine detects cross-application multiple claims on identical land parcels and flags syndicate patterns.
 - [x] **ENG-06**: Statistical & Geographic Engine identifies abnormal application density in villages compared to historical cultivator baselines.
 - [x] **ENG-07**: Temporal Spike Engine detects abnormal submission surges in districts preceding key scheme milestone dates (installment payouts).
+- [x] **ENG-08**: Isolation Forest Machine Learning Engine performs unsupervised multivariate outlier detection across joint distributions of land area, discrepancy %, age, fuzzy name matches, and village density.
 
 ### Risk Scoring, Confidence & Explainability
-- [ ] **RISK-01**: Risk Scorer computes cumulative weighted severity score (capped at 0-100) from all triggered anomaly flags.
-- [ ] **RISK-02**: Confidence Engine dynamically assigns `High`, `Medium`, or `Low` based on deterministic evidence strength and score thresholds.
-- [ ] **RISK-03**: Rationale Generator synthesizes clear, human-readable plain-English explanation of why the application was flagged.
-- [ ] **RISK-04**: Application status is automatically mapped based on risk score tier (`AUTO_CLEARED`, `UNDER_REVIEW`, `ACTION_REQUIRED`, `FIELD_VERIFICATION`, `PAYMENT_HELD`).
+- [x] **RISK-01**: Risk Scorer computes cumulative weighted severity score (capped at 0-100) from all triggered anomaly flags.
+- [x] **RISK-02**: Confidence Engine dynamically assigns `High`, `Medium`, or `Low` based on deterministic registry coverage and verification completeness.
+- [x] **RISK-03**: Rationale Generator synthesizes clear, human-readable plain-English explanation of why the application was flagged.
+- [x] **RISK-04**: Triage recommendations are generated for officer review; applications remain in `SUBMITTED`/`UNDER_REVIEW` and strictly require Officer Final Decision (no automatic approval or disbursement).
+- [x] **RISK-05**: Decoupled Confidence Assessment mathematically separates threat risk (0-100) from evidential certainty (0-100%), allowing clean applicants to have High confidence and low risk.
+- [x] **EVAL-01**: Synthetic Ground-Truth Evaluation Service benchmarks the 8-engine pipeline, computing Precision, Recall, F1-Score, Confusion Matrix, Specificity, and False Positive Rate via `GET /api/admin/evaluation/metrics`.
 
 ### Farmer Applicant Portal
 - [ ] **FARM-01**: Farmer can view dashboard with list of submitted applications and status badges.
@@ -49,8 +52,8 @@
 - [ ] **ADM-02**: Admin dashboard renders interactive charts for risk distribution, anomaly frequencies, and geographic concentration.
 - [ ] **ADM-03**: Admin can view, filter (by risk tier, status, district, village), and sort applications table by risk score.
 - [ ] **ADM-04**: Admin can inspect full anomaly dossier: applicant profile, scheme details, risk report, individual anomaly flags with score weights, and raw evidence JSON.
-- [ ] **ADM-05**: Admin can execute decision actions (`APPROVE`, `HOLD`, `REJECT`, `REQUEST_DOCUMENTS`, `ESCALATE`) with mandatory remarks, updating application status.
-- [ ] **ADM-06**: Admin actions are immutably logged to `audit_logs` table, and filtered applications can be exported to CSV.
+- [x] **ADM-05**: Admin can execute decision actions (`APPROVE`, `HOLD`, `REJECT`, `REQUEST_DOCUMENTS`, `ESCALATE`) with mandatory remarks, updating application status.
+- [x] **ADM-06**: Admin actions are immutably logged to `audit_logs` table, and filtered applications can be exported to CSV.
 
 ### Seed Dataset & Demo Verification
 - [ ] **SEED-01**: Seeder script provisions admin user (`admin@pmkisan.gov.in`) and farmer user (`farmer@test.com`).

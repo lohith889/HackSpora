@@ -9,6 +9,7 @@ from app.database import Base, engine
 from app.routes.auth_routes import router as auth_router
 from app.routes.scheme_routes import scheme_router
 from app.routes.application_routes import application_router
+from app.routes.admin_routes import admin_router
 from app.schemas import HealthResponse
 
 
@@ -55,6 +56,7 @@ app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads"
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(scheme_router, prefix=settings.API_V1_STR)
 app.include_router(application_router, prefix=settings.API_V1_STR)
+app.include_router(admin_router, prefix=settings.API_V1_STR)
 
 
 @app.get("/api/health", response_model=HealthResponse, tags=["Health"])

@@ -23,10 +23,10 @@ flowchart TD
     subgraph CoreServices["Backend Service Layer"]
         AppService["Application Ingestion Service\n- Form Validation\n- Salted SHA-256 Aadhaar Tokenizer\n- Derived Parcel ID Generator\n- Derived Bank Key Generator"]
         FileService["Document Storage Service\n- MIME & Size Validation (<= 5MB)\n- Safe Local Persistence (backend/uploads/)"]
-        AnomalyOrchestrator["Anomaly Engine Orchestrator\n- Pipeline Dispatcher\n- Risk Scorer (0-100)\n- Confidence Classifier\n- Explainable Rationale Generator"]
+        AnomalyOrchestrator["Anomaly Engine Orchestrator\n- Pipeline Dispatcher (8 Engines)\n- Risk Scorer (0-100 Threat Severity)\n- Decoupled Confidence Engine (0-100% Evidential Certainty)\n- Explainable Rationale Generator\n- Ground-Truth Model Evaluation Benchmark"]
     end
 
-    subgraph AnomalyEngines["7-Engine Anomaly Detection Pipeline"]
+    subgraph AnomalyEngines["8-Engine Anomaly Detection Pipeline"]
         E1["1. Identity Engine\n- e-KYC status\n- OTP check\n- Duplicate Aadhaar\n- Bulk mobile reuse"]
         E2["2. Land Records Engine\n- Missing parcel\n- Owner Aadhaar match\n- Fuzzy name ratio\n- Non-agricultural check\n- Inactive title status"]
         E3["3. Bank Validation Engine\n- Invalid IFSC\n- Inactive account\n- Failed penny drop\n- Name mismatch\n- Mule shared accounts"]
@@ -34,6 +34,7 @@ flowchart TD
         E5["5. Duplicate Parcel Engine\n- Multi-claim on parcel\n- Syndicate mobile reuse\n- Over-claimed plot (>3)"]
         E6["6. Statistical & Geographic Engine\n- Village application density\n- Baseline ratio (>1.75x, >2.5x)"]
         E7["7. Temporal Spike Engine\n- Pre-event surge (48h)\n- Payout deadline spike (>3x, >5x)"]
+        E8["8. Isolation Forest ML Engine\n- Unsupervised multivariate outlier detection\n- Decision function & feature driver extraction"]
     end
 
     subgraph DataStorage["Data Persistence Layer"]

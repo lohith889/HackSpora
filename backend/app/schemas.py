@@ -151,6 +151,7 @@ class AnomalyFlagResponse(BaseModel):
 
 class AnomalyReportResponse(BaseModel):
     risk_score: int
+    confidence_score: int = 85
     confidence_level: str
     recommended_action: str
     rationale: str
@@ -164,8 +165,12 @@ class AdminApplicationDetail(BaseModel):
     scheme_code: str
     status: str
     risk_score: Optional[int] = None
+    confidence_score: Optional[int] = None
     confidence_level: Optional[str] = None
     recommended_action: Optional[str] = None
+    officer_decision: Optional[str] = None
+    officer_remarks: Optional[str] = None
+    officer_decided_at: Optional[datetime.datetime] = None
     submitted_at: Optional[datetime.datetime] = None
     created_at: datetime.datetime
 
@@ -201,3 +206,33 @@ class AdminApplicationDetail(BaseModel):
     anomaly_flags: List[AnomalyFlagResponse] = []
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class OfficerDecisionRequest(BaseModel):
+    decision: str = Field(..., description="Action: APPROVE, REJECT, HOLD, REQUEST_DOCUMENTS, ESCALATE")
+    remarks: str = Field(..., min_length=3, max_length=1000, description="Mandatory officer explanation")
+
+
+class OfficerDecisionResponse(BaseModel):
+    application_id: int
+    previous_status: str
+    new_status: str
+    decision: str
+    remarks: str
+    decided_at: datetime.datetime
+    decided_by_officer: str
+
+
+class EvaluationMetricsResponse(BaseModel):
+    total_test_samples: int
+    true_positives: int
+    false_positives: int
+    true_negatives: int
+    false_negatives: int
+    accuracy: float
+    precision: float
+    recall: float
+    f1_score: float
+    specificity: float
+    false_positive_rate: float
+    evaluation_timestamp: datetime.datetime

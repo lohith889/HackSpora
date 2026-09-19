@@ -50,10 +50,10 @@
 5. Uploaded documents are verified for MIME type, size <= 5MB, and stored in `backend/uploads/`.
 
 ### Phase 3: Modular Anomaly Detection Engines
-**Goal:** Implement and test all 7 anomaly detection engines against applicant data and reference master tables.  
+**Goal:** Implement and test all 8 anomaly detection engines against applicant data and reference master tables.  
 **Mode:** mvp  
 **Status:** Complete ✓  
-**Requirements:** ENG-01, ENG-02, ENG-03, ENG-04, ENG-05, ENG-06, ENG-07  
+**Requirements:** ENG-01, ENG-02, ENG-03, ENG-04, ENG-05, ENG-06, ENG-07, ENG-08  
 **Success Criteria:**
 1. **Identity Engine** flags e-KYC failures, unverified OTP, duplicate Aadhaar numbers across applications, and bulk mobile phone reuse.
 2. **Land Engine** queries `land_records_master` to flag non-existent parcels, owner Aadhaar mismatches, fuzzy owner name discrepancies, non-agricultural land use, inactive ownership, and declared area mismatches.
@@ -62,17 +62,20 @@
 5. **Duplicate Parcel Engine** scans submitted applications to flag multiple applications claiming subsidies on the same parcel.
 6. **Statistical Engine** calculates village-level application density against historical cultivator baselines and flags anomalous spikes (>1.75x medium, >2.5x high).
 7. **Temporal Engine** compares district application volume within 48 hours preceding milestone dates in `event_calendar_master` against the 14-day baseline and flags surges (>3x medium, >5x high).
+8. **Isolation Forest Engine** evaluates 6-dimensional feature vectors to detect unsupervised multivariate outliers and provides explainable contributing factor drivers.
 
-### Phase 4: Risk Scoring & Explainability Engine
-**Goal:** Aggregate anomaly flags into an overall 0-100 risk score, compute confidence ratings, generate plain-English rationales, and map application statuses.  
+### Phase 4: Risk Scoring, Decoupled Confidence, Officer Final Decision & Evaluation
+**Goal:** Compute decoupled 0-100 risk scores and evidential confidence percentages, synthesize plain-English rationales, enforce Scheme Officer Final Decision gating, and benchmark Precision/Recall/F1 against synthetic ground truth.  
 **Mode:** mvp  
-**Requirements:** RISK-01, RISK-02, RISK-03, RISK-04  
+**Status:** Complete ✓  
+**Requirements:** RISK-01, RISK-02, RISK-03, RISK-04, RISK-05, EVAL-01, ADM-05, ADM-06  
 **Success Criteria:**
 1. Risk score is computed by summing weighted severity values of all triggered flags, capped at 100.
-2. Confidence level (`High`, `Medium`, `Low`) is determined based on deterministic flags (Aadhaar mismatch, exclusion hits) and risk score thresholds.
-3. Rationale generator outputs clear, structured natural language summary highlighting key anomaly drivers.
-4. Application status is automatically mapped to `AUTO_CLEARED` (0-24), `UNDER_REVIEW` (25-49), `ACTION_REQUIRED` (50-74), `FIELD_VERIFICATION` (75-89), or `PAYMENT_HELD` (90-100).
+2. Confidence score (0-100%) and level (`High`, `Medium`, `Low`) are mathematically decoupled from risk to quantify evidential certainty and registry verification completeness.
+3. Rationale generator outputs clear, structured natural language summary highlighting key anomaly drivers and evidence certainty.
+4. Applications strictly require Scheme Officer Final Decision (`APPROVE`, `REJECT`, `HOLD`, `REQUEST_DOCUMENTS`, `ESCALATE`) with written remarks and immutable audit logging — no automatic approval or disbursement.
 5. Comprehensive anomaly report is persisted in `anomaly_reports` and `anomaly_flags` tables.
+6. Synthetic ground-truth evaluation service computes Precision, Recall, F1-Score, Confusion Matrix, Specificity, and FPR via `GET /api/admin/evaluation/metrics`.
 
 ### Phase 5: Farmer Application Portal UI
 **Goal:** Build a user-friendly, responsive React frontend tailored for Indian farmers with authentication, a guided multi-section application form, and citizen status tracker.  
