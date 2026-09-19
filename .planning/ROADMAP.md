@@ -40,6 +40,7 @@
 ### Phase 2: Scheme & Application Ingestion
 **Goal:** Provide scheme field specifications, process multipart application submissions with land documents, tokenize Aadhaar numbers with salt, and persist applications.  
 **Mode:** mvp  
+**Status:** Complete ✓  
 **Requirements:** SCHM-01, SCHM-02, SCHM-03, SCHM-04, APP-01, APP-02, APP-03, APP-04, APP-05  
 **Success Criteria:**
 1. Endpoint `GET /api/schemes/PM_KISAN/fields` returns all required sections and validation constraints.

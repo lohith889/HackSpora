@@ -12,17 +12,17 @@
 - [x] **AUTH-04**: Session state persists across browser reloads via token storage in frontend client.
 
 ### Scheme Definition & Application Form
-- [ ] **SCHM-01**: User can fetch active scheme metadata and required fields via `/api/schemes/PM_KISAN/fields`.
-- [ ] **SCHM-02**: User can complete multi-section PM-KISAN form (Personal, Mobile OTP, Identity/Aadhaar, Bank, Land, Document Upload, Declarations).
-- [ ] **SCHM-03**: Frontend and backend validate mock OTP (`123456`), Aadhaar 12-digit format, bank account length, IFSC format, and required declarations.
-- [ ] **SCHM-04**: Backend hashes Aadhaar with salt into `aadhaar_ref` and stores masked representation (`aadhaar_masked`), never storing raw Aadhaar.
+- [x] **SCHM-01**: User can fetch active scheme metadata and required fields via `/api/schemes/PM_KISAN/fields`.
+- [x] **SCHM-02**: User can complete multi-section PM-KISAN form (Personal, Mobile OTP, Identity/Aadhaar, Bank, Land, Document Upload, Declarations).
+- [x] **SCHM-03**: Frontend and backend validate mock OTP (`123456`), Aadhaar 12-digit format, bank account length, IFSC format, and required declarations.
+- [x] **SCHM-04**: Backend hashes Aadhaar with salt into `aadhaar_ref` and stores masked representation (`aadhaar_masked`), never storing raw Aadhaar.
 
 ### Application Ingestion & File Storage
-- [ ] **APP-01**: User can upload land proof document (PDF, JPG, PNG <= 5MB) via multipart form-data.
-- [ ] **APP-02**: Backend safely validates file extension, file size, and stores files in `backend/uploads/` with unique timestamped names.
-- [ ] **APP-03**: Backend generates standard composite identifiers: `parcel_id` and `bank_account_ifsc_key`.
-- [ ] **APP-04**: Backend creates persistent `applications` and `pm_kisan_application_details` records in SQLite.
-- [ ] **APP-05**: User receives immediate submission response with application ID, status, and citizen-friendly status message.
+- [x] **APP-01**: User can upload land proof document (PDF, JPG, PNG <= 5MB) via multipart form-data.
+- [x] **APP-02**: Backend safely validates file extension, file size, and stores files in `backend/uploads/` with unique timestamped names.
+- [x] **APP-03**: Backend generates standard composite identifiers: `parcel_id` and `bank_account_ifsc_key`.
+- [x] **APP-04**: Backend creates persistent `applications` and `pm_kisan_application_details` records in SQLite.
+- [x] **APP-05**: User receives immediate submission response with application ID, status, and citizen-friendly status message.
 
 ### Anomaly Detection Pipeline
 - [ ] **ENG-01**: Identity Engine evaluates mock e-KYC status, OTP verification, duplicate Aadhaar across accounts, and bulk mobile usage.

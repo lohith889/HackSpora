@@ -6,7 +6,7 @@ from app.schemas import (
     SchemeFieldOption,
 )
 
-scheme_router = APIRouter(prefix="/api/schemes", tags=["Schemes"])
+scheme_router = APIRouter(prefix="/schemes", tags=["Schemes"])
 
 PM_KISAN_METADATA = SchemeMetadataResponse(
     scheme_code="PM_KISAN",

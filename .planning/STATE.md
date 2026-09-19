@@ -5,19 +5,19 @@
 See: `.planning/PROJECT.md` (updated 2026-09-19)
 
 **Core value:** Deterministic and statistical anomaly detection on agricultural subsidy applications that reliably flags fraudulent claims with high confidence and explainable rationale while keeping internal fraud scoring invisible to applicants.  
-**Current focus:** Phase 2: Scheme & Application Ingestion  
-**Status:** In Progress (Phase 1 Complete ✓)
+**Current focus:** Phase 3: Modular Anomaly Detection Engines  
+**Status:** In Progress (Phases 1 & 2 Complete ✓)
 
 ## Progress
 
-- **Phases:** 1 of 7 completed
-- **v1 Requirements:** 4 of 34 verified
-- **Current Phase:** Phase 2 (Scheme & Application Ingestion)
+- **Phases:** 2 of 7 completed
+- **v1 Requirements:** 13 of 34 verified
+- **Current Phase:** Phase 3 (Modular Anomaly Detection Engines)
 
 ## Phase Breakdown
 
 - [x] **Phase 1: Foundation & Authentication** — Backend setup, SQLite/SQLAlchemy schemas, JWT auth & RBAC
-- [ ] **Phase 2: Scheme & Application Ingestion** — PM-KISAN form handling, document uploads, salted Aadhaar hashing
+- [x] **Phase 2: Scheme & Application Ingestion** — PM-KISAN form handling, document uploads, salted Aadhaar hashing
 - [ ] **Phase 3: Modular Anomaly Detection Engines** — 7 detection engines (Identity, Land, Bank, Exclusion, Duplicate, Statistical, Temporal)
 - [ ] **Phase 4: Risk Scoring & Explainability Engine** — Weighted risk scoring (0-100), confidence levels, rationale generator
 - [ ] **Phase 5: Farmer Application Portal UI** — Farmer React UI, multi-section application form, status tracker
