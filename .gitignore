@@ -1,9 +1,24 @@
+# ─────────────────────────────────────────────────────────────
+# Environment Variables & Secrets (CRITICAL)
+# ─────────────────────────────────────────────────────────────
+.env
+.env.*
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+!.env.example
+
+# ─────────────────────────────────────────────────────────────
+# Python & Bytecode
+# ─────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyo
+*.pyd
 .Python
-env/
 build/
 develop-eggs/
 dist/
@@ -19,38 +34,61 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-
-# Virtual environments
-venv/
-.venv/
-ENV/
-HackSpora/
-
-# SQLite & databases
-*.db
-*.sqlite3
-
-# Pytest / coverage
+.mypy_cache/
 .pytest_cache/
 .coverage
 htmlcov/
 
-# IDE / OS
-.vscode/
-.idea/
-*.swp
-*.swo
-Thumbs.db
-Desktop.ini
-.DS_Store
+# ─────────────────────────────────────────────────────────────
+# Virtual Environments
+# ─────────────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
 
-# Local uploads storage (preserve directory structure but not uploaded user files)
+# ─────────────────────────────────────────────────────────────
+# Databases & Vector Stores
+# ─────────────────────────────────────────────────────────────
+*.db
+*.sqlite3
+chroma_db/
+**/chroma_db/
+vectordb/
+**/vectordb/
+
+# ─────────────────────────────────────────────────────────────
+# Uploads & Temporary User Data
+# ─────────────────────────────────────────────────────────────
 backend/uploads/*
 !backend/uploads/.gitkeep
+uploads/
+**/uploads/*
+!**/uploads/.gitkeep
+data/
+**/data/*
 
-# Node dependencies and build artifacts
+# ─────────────────────────────────────────────────────────────
+# Node / Frontend Build Artifacts
+# ─────────────────────────────────────────────────────────────
 node_modules/
 frontend/node_modules/
 frontend/.next/
 frontend/dist/
 frontend/build/
+.npm
+*.log
+
+# ─────────────────────────────────────────────────────────────
+# IDE & Operating System Artifacts
+# ─────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+Thumbs.db
+Desktop.ini
+.DS_Store

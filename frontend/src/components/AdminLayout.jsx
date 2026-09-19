@@ -1,5 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import ChatWidget from './ChatWidget'
 
 export default function AdminLayout({ children }) {
   const { user, logout } = useAuth()
@@ -161,6 +162,7 @@ export default function AdminLayout({ children }) {
           </div>
         </div>
       </footer>
+      <ChatWidget />
     </div>
   )
 }
