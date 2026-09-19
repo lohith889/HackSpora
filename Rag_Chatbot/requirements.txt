@@ -1,0 +1,29 @@
+# ── Core LangChain ────────────────────────────────────────────
+langchain
+langchain-core
+langchain-community
+langchain-huggingface
+langchain-text-splitters
+langchain-chroma
+langchain-groq
+
+# ── Embeddings & Models ───────────────────────────────────────
+sentence-transformers
+transformers
+torch
+
+# ── Vector Store ──────────────────────────────────────────────
+chromadb
+
+# ── PDF Loading ───────────────────────────────────────────────
+pypdf
+pymupdf
+
+# ── Utilities ─────────────────────────────────────────────────
+python-dotenv
+tiktoken
+
+# ── Numerical / ML ────────────────────────────────────────────
+numpy
+pandas
+scikit-learn
