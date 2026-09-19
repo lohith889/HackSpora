@@ -4,10 +4,18 @@
 
 ## Overview
 
+- [x] Phase 1: Foundation & Authentication
+- [ ] Phase 2: Scheme & Application Ingestion
+- [ ] Phase 3: Modular Anomaly Detection Engines
+- [ ] Phase 4: Risk Scoring & Explainability Engine
+- [ ] Phase 5: Farmer Application Portal UI
+- [ ] Phase 6: Admin Anomaly Review Console UI
+- [ ] Phase 7: Master Seed Data & Live Demo Verification
+
 | Phase | Name | Goal | Requirements | Criteria |
 |---|---|---|---|---|
 | 1 | Foundation & Authentication | Establish FastAPI backend, database models, and secure JWT/bcrypt authentication with RBAC | AUTH-01, AUTH-02, AUTH-03, AUTH-04 | 4 |
-| 2 | Scheme & Application Ingestion | Implement PM-KISAN field metadata, secure multipart file uploads, salted Aadhaar tokenization, and application persistence | SCHM-01, SCHM-02, SCHM-03, SCHM-04, APP-01, APP-02, APP-03, APP-04, APP-05 | 5 |
+| 2 | Scheme & Application Ingestion | Provide scheme field specifications, process multipart application submissions with land documents, tokenize Aadhaar numbers with salt, and persist applications | SCHM-01, SCHM-02, SCHM-03, SCHM-04, APP-01, APP-02, APP-03, APP-04, APP-05 | 5 |
 | 3 | Modular Anomaly Detection Engines | Construct all 7 anomaly detection engines: Identity, Land, Bank, Exclusion, Duplicate Parcel, Statistical/Geographic, and Temporal Spikes | ENG-01, ENG-02, ENG-03, ENG-04, ENG-05, ENG-06, ENG-07 | 7 |
 | 4 | Risk Scoring & Explainability Engine | Implement weighted risk scoring (0-100), confidence level logic, natural language rationale generator, and automated status mapper | RISK-01, RISK-02, RISK-03, RISK-04 | 4 |
 | 5 | Farmer Application Portal UI | Build responsive React frontend for farmer authentication, multi-step application form with OTP & document upload, and citizen status tracker | FARM-01, FARM-02, FARM-03 | 3 |

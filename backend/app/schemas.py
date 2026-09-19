@@ -1,6 +1,6 @@
 import datetime
 from pydantic import BaseModel, EmailStr, Field, ConfigDict
-from typing import Optional, List, Any
+from typing import Optional, List, Dict, Any
 
 
 class UserBase(BaseModel):
@@ -45,3 +45,159 @@ class HealthResponse(BaseModel):
     status: str
     project: str
     version: str
+
+
+# ==========================================
+# Scheme Specifications & Metadata Schemas
+# ==========================================
+
+class SchemeFieldOption(BaseModel):
+    label: str
+    value: str
+
+
+class SchemeFieldSpec(BaseModel):
+    name: str
+    label: str
+    type: str  # text, number, date, select, checkbox, file
+    required: bool = True
+    placeholder: Optional[str] = None
+    validation_regex: Optional[str] = None
+    options: Optional[List[SchemeFieldOption]] = None
+    help_text: Optional[str] = None
+
+
+class SchemeSectionSpec(BaseModel):
+    section_id: str
+    title: str
+    description: Optional[str] = None
+    fields: List[SchemeFieldSpec]
+
+
+class SchemeMetadataResponse(BaseModel):
+    scheme_code: str
+    scheme_name: str
+    version: str
+    description: str
+    allowed_mime_types: List[str]
+    max_file_size_mb: int
+    sections: List[SchemeSectionSpec]
+
+
+# ==========================================
+# Application Submission & Tracking Schemas
+# ==========================================
+
+class ApplicationSubmissionResponse(BaseModel):
+    application_id: int
+    scheme_code: str
+    status: str
+    citizen_status_message: str
+    submitted_at: datetime.datetime
+    parcel_id: str
+    aadhaar_masked: str
+
+
+class CitizenApplicationSummary(BaseModel):
+    id: int
+    scheme_code: str
+    status: str
+    citizen_status_message: str
+    submitted_at: Optional[datetime.datetime] = None
+    farmer_name: str
+    parcel_id: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class CitizenApplicationDetail(BaseModel):
+    id: int
+    scheme_code: str
+    status: str
+    citizen_status_message: str
+    submitted_at: Optional[datetime.datetime] = None
+    farmer_name: str
+    date_of_birth: datetime.date
+    gender: str
+    category: Optional[str] = None
+    mobile_number: str
+    aadhaar_masked: str
+    bank_account_number: str
+    ifsc_code: str
+    state_code: str
+    district_code: str
+    tehsil_code: str
+    village_code: str
+    khata_number: str
+    plot_number: str
+    declared_land_area_ha: float
+    ownership_type: str
+    declared_crop_code: Optional[str] = None
+    land_document_path: str
+    parcel_id: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AnomalyFlagResponse(BaseModel):
+    anomaly_code: str
+    severity: str
+    score: int
+    rationale: str
+    evidence_json: Optional[Any] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AnomalyReportResponse(BaseModel):
+    risk_score: int
+    confidence_level: str
+    recommended_action: str
+    rationale: str
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AdminApplicationDetail(BaseModel):
+    id: int
+    user_id: int
+    scheme_code: str
+    status: str
+    risk_score: Optional[int] = None
+    confidence_level: Optional[str] = None
+    recommended_action: Optional[str] = None
+    submitted_at: Optional[datetime.datetime] = None
+    created_at: datetime.datetime
+
+    # PM-Kisan Details
+    farmer_name: str
+    date_of_birth: datetime.date
+    gender: str
+    category: Optional[str] = None
+    mobile_number: str
+    otp_verified: bool
+    aadhaar_ref: str
+    aadhaar_masked: str
+    bank_account_number: str
+    ifsc_code: str
+    bank_account_ifsc_key: str
+    state_code: str
+    district_code: str
+    tehsil_code: str
+    village_code: str
+    khata_number: str
+    plot_number: str
+    declared_land_area_ha: float
+    ownership_type: str
+    declared_crop_code: Optional[str] = None
+    land_document_path: str
+    self_declaration: bool
+    e_kyc_consent: bool
+    e_kyc_status: bool
+    parcel_id: str
+
+    # Anomaly Dossier
+    anomaly_report: Optional[AnomalyReportResponse] = None
+    anomaly_flags: List[AnomalyFlagResponse] = []
+
+    model_config = ConfigDict(from_attributes=True)

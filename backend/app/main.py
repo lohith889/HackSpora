@@ -7,6 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from app.config import settings
 from app.database import Base, engine
 from app.routes.auth_routes import router as auth_router
+from app.routes.scheme_routes import scheme_router
 from app.schemas import HealthResponse
 
 
