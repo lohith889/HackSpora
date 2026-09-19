@@ -204,3 +204,35 @@ def test_role_guard_restriction():
     )
     assert resp_allowed.status_code == 200
     assert resp_allowed.json()["message"] == "Welcome, Administrator"
+
+
+def test_update_user_profile():
+    """Verify authenticated user can update profile details via PUT /api/auth/me."""
+    user_resp = client.post(
+        "/api/auth/register",
+        json={
+            "email": "update.profile@test.com",
+            "password": "Password@123",
+            "full_name": "Original Name",
+            "mobile_number": "9876543219",
+            "date_of_birth": "1992-04-10",
+            "gender": "Male",
+            "category": "General",
+        },
+    )
+    token = user_resp.json()["access_token"]
+
+    update_resp = client.put(
+        "/api/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "full_name": "Updated Name",
+            "category": "OBC",
+        },
+    )
+    assert update_resp.status_code == 200
+    updated_data = update_resp.json()
+    assert updated_data["full_name"] == "Updated Name"
+    assert updated_data["category"] == "OBC"
+    assert updated_data["email"] == "update.profile@test.com"
+

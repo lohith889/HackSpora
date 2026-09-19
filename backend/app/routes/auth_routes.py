@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User
-from app.schemas import UserRegister, UserLogin, UserResponse, Token
+from app.schemas import UserRegister, UserLogin, UserResponse, UserUpdate, Token
 from app.auth import hash_password, verify_password, create_access_token, get_current_user
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -73,4 +73,25 @@ def login(credentials: UserLogin, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     """Return profile details for the currently authenticated user."""
+    return UserResponse.model_validate(current_user)
+
+
+@router.put("/me", response_model=UserResponse)
+def update_profile(
+    update_in: UserUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update profile details for the currently authenticated user."""
+    if update_in.full_name is not None:
+        current_user.full_name = update_in.full_name.strip()
+    if update_in.mobile_number is not None:
+        current_user.mobile_number = update_in.mobile_number.strip()
+    if update_in.gender is not None:
+        current_user.gender = update_in.gender.strip()
+    if update_in.category is not None:
+        current_user.category = update_in.category.strip()
+
+    db.commit()
+    db.refresh(current_user)
     return UserResponse.model_validate(current_user)

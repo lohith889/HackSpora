@@ -6,9 +6,12 @@ Provides endpoints for Scheme Officers (ADMIN role) to:
   2. Inspect Anomaly Dossiers & Evaluation Benchmarks (Precision / Recall / F1)
   3. Query, filter, and review applications
 """
+import io
+import csv
 import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session, joinedload
 
 from app.database import get_db
@@ -224,6 +227,111 @@ def list_applications_for_admin(
         ))
 
     return results
+
+
+@admin_router.get(
+    "/applications/export/csv",
+    summary="Export Applications and Anomaly Reports as CSV",
+)
+def export_applications_csv(
+    status_filter: Optional[str] = Query(None, alias="status"),
+    district: Optional[str] = Query(None),
+    village: Optional[str] = Query(None),
+    min_risk: Optional[int] = Query(None),
+    max_risk: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role("ADMIN")),
+):
+    """Export filtered applications and anomaly summaries as a downloadable CSV file."""
+    query = (
+        db.query(Application)
+        .options(
+            joinedload(Application.pm_kisan_details),
+            joinedload(Application.anomaly_report),
+            joinedload(Application.anomaly_flags),
+        )
+    )
+
+    if status_filter:
+        query = query.filter(Application.status == status_filter.strip().upper())
+    if min_risk is not None:
+        query = query.filter(Application.risk_score >= min_risk)
+    if max_risk is not None:
+        query = query.filter(Application.risk_score <= max_risk)
+
+    apps = query.order_by(Application.risk_score.desc().nullslast(), Application.submitted_at.desc()).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow([
+        "Application ID",
+        "Farmer Name",
+        "Status",
+        "Risk Score",
+        "Risk Tier",
+        "Confidence Score",
+        "Confidence Level",
+        "Recommended Action",
+        "District",
+        "Village",
+        "Parcel ID",
+        "Bank Account",
+        "IFSC",
+        "Anomaly Flag Count",
+        "Anomaly Codes",
+        "Submitted At",
+        "Officer Decision",
+        "Officer Remarks",
+    ])
+
+    for a in apps:
+        details = a.pm_kisan_details
+        if not details:
+            continue
+        if district and details.district_code != district.strip().upper():
+            continue
+        if village and details.village_code != village.strip().upper():
+            continue
+
+        flags = a.anomaly_flags or []
+        flag_codes = "; ".join(f.anomaly_code for f in flags)
+        tier = "Low"
+        if a.risk_score is not None:
+            if a.risk_score >= 75:
+                tier = "Critical"
+            elif a.risk_score >= 50:
+                tier = "High"
+            elif a.risk_score >= 25:
+                tier = "Moderate"
+
+        writer.writerow([
+            f"APP-{str(a.id).zfill(6)}",
+            details.farmer_name,
+            a.status,
+            a.risk_score if a.risk_score is not None else 0,
+            tier,
+            f"{a.confidence_score}%" if a.confidence_score is not None else "85%",
+            a.confidence_level or "Medium",
+            a.recommended_action or "",
+            details.district_code,
+            details.village_code,
+            details.parcel_id,
+            details.bank_account_number,
+            details.ifsc_code,
+            len(flags),
+            flag_codes,
+            a.submitted_at.isoformat() if a.submitted_at else "",
+            a.officer_decision or "",
+            a.officer_remarks or "",
+        ])
+
+    output.seek(0)
+    filename = f"kisanguard_applications_{datetime.datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.csv"
+    return StreamingResponse(
+        io.BytesIO(output.getvalue().encode("utf-8")),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @admin_router.get(

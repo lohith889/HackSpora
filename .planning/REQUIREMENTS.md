@@ -43,15 +43,15 @@
 - [x] **EVAL-01**: Synthetic Ground-Truth Evaluation Service benchmarks the 8-engine pipeline, computing Precision, Recall, F1-Score, Confusion Matrix, Specificity, and False Positive Rate via `GET /api/admin/evaluation/metrics`.
 
 ### Farmer Applicant Portal
-- [ ] **FARM-01**: Farmer can view dashboard with list of submitted applications and status badges.
-- [ ] **FARM-02**: Farmer can view detailed application progress with masked PII and official government guidance notes.
-- [ ] **FARM-03**: Farmer detail view strictly redacts risk score, anomaly codes, and internal fraud rationale.
+- [x] **FARM-01**: Farmer can view dashboard with list of submitted applications and status badges.
+- [x] **FARM-02**: Farmer can view detailed application progress with masked PII and official government guidance notes.
+- [x] **FARM-03**: Farmer detail view strictly redacts risk score, anomaly codes, and internal fraud rationale.
 
 ### Admin Anomaly Review Console
-- [ ] **ADM-01**: Admin dashboard displays KPI summary metrics (total applications, high/medium/low risk counts, pending reviews, top anomaly flags).
-- [ ] **ADM-02**: Admin dashboard renders interactive charts for risk distribution, anomaly frequencies, and geographic concentration.
-- [ ] **ADM-03**: Admin can view, filter (by risk tier, status, district, village), and sort applications table by risk score.
-- [ ] **ADM-04**: Admin can inspect full anomaly dossier: applicant profile, scheme details, risk report, individual anomaly flags with score weights, and raw evidence JSON.
+- [x] **ADM-01**: Admin dashboard displays KPI summary metrics (total applications, high/medium/low risk counts, pending reviews, top anomaly flags).
+- [x] **ADM-02**: Admin dashboard renders interactive charts for risk distribution, anomaly frequencies, and geographic concentration.
+- [x] **ADM-03**: Admin can view, filter (by risk tier, status, district, village), and sort applications table by risk score.
+- [x] **ADM-04**: Admin can inspect full anomaly dossier: applicant profile, scheme details, risk report, individual anomaly flags with score weights, and raw evidence JSON.
 - [x] **ADM-05**: Admin can execute decision actions (`APPROVE`, `HOLD`, `REJECT`, `REQUEST_DOCUMENTS`, `ESCALATE`) with mandatory remarks, updating application status.
 - [x] **ADM-06**: Admin actions are immutably logged to `audit_logs` table, and filtered applications can be exported to CSV.
 

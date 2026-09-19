@@ -627,3 +627,16 @@ class TestAdminWorkflowAndDecisions:
         assert "f1_score" in metrics
         assert "confusion_matrix" in metrics or "true_positives" in metrics
         assert metrics["total_test_samples"] > 0
+
+    def test_admin_export_applications_csv(self):
+        """Admin can export applications and anomaly reports as CSV."""
+        admin_headers = get_admin_auth_headers("csv_exporter@pmkisan.gov.in")
+        res = client.get("/api/admin/applications/export/csv", headers=admin_headers)
+        assert res.status_code == 200
+        assert "text/csv" in res.headers.get("content-type", "")
+        lines = res.text.strip().splitlines()
+        assert len(lines) >= 1
+        header = lines[0]
+        assert "Application ID" in header
+        assert "Risk Score" in header
+        assert "Anomaly Codes" in header

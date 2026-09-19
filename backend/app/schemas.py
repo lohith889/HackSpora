@@ -16,6 +16,13 @@ class UserRegister(UserBase):
     password: str = Field(..., min_length=6, max_length=100)
 
 
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = Field(None, min_length=2, max_length=255)
+    mobile_number: Optional[str] = Field(None, min_length=10, max_length=15)
+    gender: Optional[str] = Field(None, min_length=1, max_length=20)
+    category: Optional[str] = None
+
+
 class UserLogin(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=1)

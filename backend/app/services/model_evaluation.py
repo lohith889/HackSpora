@@ -51,77 +51,83 @@ def evaluate_pipeline_on_synthetic_ground_truth(db: Session) -> Dict[str, Any]:
     clean_bank_key_1 = "998877665544-SBIN0001234"
     clean_aadhaar_ref_1 = hash_aadhaar("100010001000")
 
-    db.add(LandRecordMaster(
-        parcel_id=clean_parcel_1,
-        state_code="UP", district_code="LKO", tehsil_code="EVAL",
-        village_code="VIL01", khata_number="KH01", plot_number="PL01",
-        owner_aadhaar_ref=clean_aadhaar_ref_1,
-        owner_name="Sita Ram",
-        land_area_ha=1.5,
-        land_use_code="AGRICULTURE",
-        agricultural_land_flag=True,
-        ownership_status="ACTIVE",
-        title_status="CLEAR",
-    ))
-    db.add(BankValidationMaster(
-        bank_account_ifsc_key=clean_bank_key_1,
-        bank_account_number="998877665544",
-        ifsc_code="SBIN0001234",
-        account_holder_name="Sita Ram",
-        account_status="ACTIVE",
-        ifsc_valid=True,
-        penny_drop_status="SUCCESS",
-        name_match_score=1.0,
-    ))
+    if not db.query(LandRecordMaster).filter_by(parcel_id=clean_parcel_1).first():
+        db.add(LandRecordMaster(
+            parcel_id=clean_parcel_1,
+            state_code="UP", district_code="LKO", tehsil_code="EVAL",
+            village_code="VIL01", khata_number="KH01", plot_number="PL01",
+            owner_aadhaar_ref=clean_aadhaar_ref_1,
+            owner_name="Sita Ram",
+            land_area_ha=1.5,
+            land_use_code="AGRICULTURE",
+            agricultural_land_flag=True,
+            ownership_status="ACTIVE",
+            title_status="CLEAR",
+        ))
+    if not db.query(BankValidationMaster).filter_by(bank_account_ifsc_key=clean_bank_key_1).first():
+        db.add(BankValidationMaster(
+            bank_account_ifsc_key=clean_bank_key_1,
+            bank_account_number="998877665544",
+            ifsc_code="SBIN0001234",
+            account_holder_name="Sita Ram",
+            account_status="ACTIVE",
+            ifsc_valid=True,
+            penny_drop_status="SUCCESS",
+            name_match_score=1.0,
+        ))
 
     # Master: Legitimate Land & Bank for Case 2 (Gita Devi)
     clean_parcel_2 = "UP-LKO-EVAL-VIL01-KH05-PL05"
     clean_bank_key_2 = "887766554433-SBIN0001234"
     clean_aadhaar_ref_2 = hash_aadhaar("100010002000")
 
-    db.add(LandRecordMaster(
-        parcel_id=clean_parcel_2,
-        state_code="UP", district_code="LKO", tehsil_code="EVAL",
-        village_code="VIL01", khata_number="KH05", plot_number="PL05",
-        owner_aadhaar_ref=clean_aadhaar_ref_2,
-        owner_name="Gita Devi",
-        land_area_ha=1.2,
-        land_use_code="AGRICULTURE",
-        agricultural_land_flag=True,
-        ownership_status="ACTIVE",
-        title_status="CLEAR",
-    ))
-    db.add(BankValidationMaster(
-        bank_account_ifsc_key=clean_bank_key_2,
-        bank_account_number="887766554433",
-        ifsc_code="SBIN0001234",
-        account_holder_name="Gita Devi",
-        account_status="ACTIVE",
-        ifsc_valid=True,
-        penny_drop_status="SUCCESS",
-        name_match_score=1.0,
-    ))
+    if not db.query(LandRecordMaster).filter_by(parcel_id=clean_parcel_2).first():
+        db.add(LandRecordMaster(
+            parcel_id=clean_parcel_2,
+            state_code="UP", district_code="LKO", tehsil_code="EVAL",
+            village_code="VIL01", khata_number="KH05", plot_number="PL05",
+            owner_aadhaar_ref=clean_aadhaar_ref_2,
+            owner_name="Gita Devi",
+            land_area_ha=1.2,
+            land_use_code="AGRICULTURE",
+            agricultural_land_flag=True,
+            ownership_status="ACTIVE",
+            title_status="CLEAR",
+        ))
+    if not db.query(BankValidationMaster).filter_by(bank_account_ifsc_key=clean_bank_key_2).first():
+        db.add(BankValidationMaster(
+            bank_account_ifsc_key=clean_bank_key_2,
+            bank_account_number="887766554433",
+            ifsc_code="SBIN0001234",
+            account_holder_name="Gita Devi",
+            account_status="ACTIVE",
+            ifsc_valid=True,
+            penny_drop_status="SUCCESS",
+            name_match_score=1.0,
+        ))
 
     # Village Profile for Evaluation
-    db.add(VillageProfileMaster(
-        village_code="VIL01",
-        district_code="LKO",
-        tehsil_code="EVAL",
-        village_name="Evaluation Village",
-        historical_beneficiary_count=100,
-        cultivator_count_estimate=120,
-    ))
+    if not db.query(VillageProfileMaster).filter_by(village_code="VIL01").first():
+        db.add(VillageProfileMaster(
+            village_code="VIL01",
+            district_code="LKO",
+            tehsil_code="EVAL",
+            village_name="Evaluation Village",
+            historical_beneficiary_count=100,
+            cultivator_count_estimate=120,
+        ))
     # Exclusion Master: Taxpayer
     taxpayer_aadhaar = hash_aadhaar("200020002000")
-    db.add(ExclusionMaster(
-        aadhaar_ref=taxpayer_aadhaar,
-        taxpayer_flag=True,
-        govt_employee_flag=False,
-        pensioner_flag=False,
-        professional_flag=False,
-        institutional_landholder_flag=False,
-        deceased_flag=False,
-    ))
+    if not db.query(ExclusionMaster).filter_by(aadhaar_ref=taxpayer_aadhaar).first():
+        db.add(ExclusionMaster(
+            aadhaar_ref=taxpayer_aadhaar,
+            taxpayer_flag=True,
+            govt_employee_flag=False,
+            pensioner_flag=False,
+            professional_flag=False,
+            institutional_landholder_flag=False,
+            deceased_flag=False,
+        ))
     db.commit()
 
     # Ground truth test cases: List of (details_dict, ground_truth_label)
@@ -286,47 +292,50 @@ def evaluate_pipeline_on_synthetic_ground_truth(db: Session) -> Dict[str, Any]:
     # ─────────────────────────────────────────────────────────────────────────
     tp = fp = tn = fn = 0
 
-    dummy_user = User(
-        email=f"{eval_prefix}@eval.test",
-        password_hash=hash_password("EvalPass123!"),
-        full_name="Eval Test User",
-        mobile_number="9876500000",
-        date_of_birth=datetime.date(1985, 1, 1),
-        gender="Male",
-    )
-    db.add(dummy_user)
-    db.flush()
-
-    for idx, (details_kwargs, y_true) in enumerate(test_cases):
-        eval_app = Application(
-            user_id=dummy_user.id,
-            scheme_code="PM_KISAN",
-            status="UNDER_REVIEW",
+    try:
+        dummy_user = User(
+            email=f"{eval_prefix}@eval.test",
+            password_hash=hash_password("EvalPass123!"),
+            full_name="Eval Test User",
+            mobile_number="9876500000",
+            date_of_birth=datetime.date(1985, 1, 1),
+            gender="Male",
         )
-        db.add(eval_app)
+        db.add(dummy_user)
         db.flush()
 
-        details = PMKisanApplicationDetails(
-            application_id=eval_app.id,
-            **details_kwargs,
-        )
-        db.add(details)
-        db.flush()
+        for idx, (details_kwargs, y_true) in enumerate(test_cases):
+            eval_app = Application(
+                user_id=dummy_user.id,
+                scheme_code="PM_KISAN",
+                status="UNDER_REVIEW",
+            )
+            db.add(eval_app)
+            db.flush()
 
-        # Run full pipeline with all 8 engines
-        pipeline_res = run_pipeline(details, db)
-        risk_score = compute_risk_score(pipeline_res.flags)
+            details = PMKisanApplicationDetails(
+                application_id=eval_app.id,
+                **details_kwargs,
+            )
+            db.add(details)
+            db.flush()
 
-        y_pred = 1 if risk_score >= ANOMALY_DECISION_THRESHOLD else 0
+            # Run full pipeline with all 8 engines
+            pipeline_res = run_pipeline(details, db)
+            risk_score = compute_risk_score(pipeline_res.flags)
 
-        if y_true == 1 and y_pred == 1:
-            tp += 1
-        elif y_true == 0 and y_pred == 1:
-            fp += 1
-        elif y_true == 0 and y_pred == 0:
-            tn += 1
-        elif y_true == 1 and y_pred == 0:
-            fn += 1
+            y_pred = 1 if risk_score >= ANOMALY_DECISION_THRESHOLD else 0
+
+            if y_true == 1 and y_pred == 1:
+                tp += 1
+            elif y_true == 0 and y_pred == 1:
+                fp += 1
+            elif y_true == 0 and y_pred == 0:
+                tn += 1
+            elif y_true == 1 and y_pred == 0:
+                fn += 1
+    finally:
+        db.rollback()
 
     total = tp + fp + tn + fn
     accuracy = (tp + tn) / total if total > 0 else 0.0

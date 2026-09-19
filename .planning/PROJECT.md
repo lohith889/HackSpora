@@ -23,8 +23,8 @@ Deterministic and statistical anomaly detection on agricultural subsidy applicat
 
 ### Active
 
-- [ ] Farmer registration, authentication (JWT, bcrypt), and profile management
-- [ ] Multi-section PM-KISAN application form (Personal, OTP verification, Identity/Aadhaar tokenization, Bank details, Land details, Document upload, Self-declaration)
+- [x] Farmer registration, authentication (JWT, bcrypt), and profile management
+- [x] Multi-section PM-KISAN application form (Personal, OTP verification, Identity/Aadhaar tokenization, Bank details, Land details, upload, Self-declaration)
 - [x] Secure file storage for land ownership documents (PDF, JPG, PNG <= 5MB)
 - [x] 8 modular anomaly detection engines:
   - Identity Engine (e-KYC failure, OTP unverified, duplicate Aadhaar, mobile bulk usage)
@@ -38,11 +38,11 @@ Deterministic and statistical anomaly detection on agricultural subsidy applicat
 - [x] Decoupled Risk scoring (0-100 threat severity), Confidence assessment (0-100% evidential certainty), and human-readable explainable rationale generator
 - [x] Officer Final Decision workflow (APPROVE, HOLD, REJECT, REQUEST_DOCUMENTS, ESCALATE) with mandatory written remarks and audit logging — no automatic clearance or disbursement
 - [x] Synthetic Ground-Truth Evaluation Service benchmarking Precision, Recall, F1-Score, Confusion Matrix, Specificity, and FPR
-- [ ] Farmer applicant dashboard displaying status and user-facing action messages (without exposing internal risk scores)
-- [ ] Admin Anomaly Review Dashboard with KPI summary, risk score sorting, status/district filtering, full anomaly report view, evidence inspector, and decision workflow
-- [ ] Audit logging for all administrative decisions and remarks
-- [ ] CSV export of anomaly reports and flagged applications
-- [ ] Comprehensive seed data generator (Admin, normal user, 20+ land records, bank master, exclusion master, village profile master, event calendar, and 20 sample applications covering all risk tiers)
+- [x] Farmer applicant dashboard displaying status and user-facing action messages (without exposing internal risk scores)
+- [x] Admin Anomaly Review Dashboard with KPI summary, risk score sorting, status/district filtering, full anomaly report view, evidence inspector, and decision workflow
+- [x] Audit logging for all administrative decisions and remarks
+- [x] CSV export of anomaly reports and flagged applications
+- [x] Comprehensive seed data generator (Admin, normal user, 20+ land records, bank master, exclusion master, village profile master, event calendar, and 20 sample applications covering all risk tiers)
 
 ### Out of Scope
 
