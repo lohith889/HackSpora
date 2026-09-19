@@ -1,42 +1,29 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { applicationAPI } from '../api/client'
-import { getStatusConfig, formatDate } from '../utils/statusUtils'
+import { getStatusConfig, formatDate, maskBankAccount } from '../utils/statusUtils'
 import Spinner from '../components/Spinner'
-import {
-  ArrowLeft, User, Phone, MapPin, Landmark, FileText,
-  Calendar, ShieldCheck, CheckCircle, Clock, Info
-} from 'lucide-react'
 
 function DetailRow({ label, value, mono = false }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-start gap-1 py-2.5 border-b border-gray-50 last:border-0">
-      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide sm:w-44 flex-shrink-0">{label}</span>
-      <span className={`text-sm text-gray-900 ${mono ? 'font-mono' : ''}`}>{value || '—'}</span>
+    <div className="flex flex-col sm:flex-row sm:items-baseline justify-between py-2 border-b border-slate-100 last:border-0 font-mono text-xs">
+      <span className="text-slate-500 uppercase tracking-wider">{label}:</span>
+      <span className={`text-slate-900 ${mono ? 'font-mono' : 'font-sans font-medium'}`}>{value || '—'}</span>
     </div>
   )
 }
 
-function Section({ title, icon: Icon, children }) {
+function SectionDocket({ title, code, children }) {
   return (
-    <div className="card mb-4">
-      <div className="flex items-center gap-2 mb-4">
-        <div className="bg-gov-blue/10 p-2 rounded-lg">
-          <Icon className="w-4 h-4 text-gov-blue" />
-        </div>
-        <h3 className="font-semibold text-gray-900">{title}</h3>
+    <div className="border border-slate-300 p-5 bg-white space-y-3 shadow-sm">
+      <div className="border-b border-slate-200 pb-2 flex items-baseline justify-between">
+        <h3 className="font-serif text-base font-bold text-slate-900">{title}</h3>
+        <span className="font-mono text-[10px] text-slate-500 uppercase tracking-widest font-semibold">{code}</span>
       </div>
-      <div>{children}</div>
+      <div className="space-y-1">{children}</div>
     </div>
   )
 }
-
-// Timeline step
-const TIMELINE = [
-  { status: 'SUBMITTED', label: 'Application Received', icon: CheckCircle },
-  { status: 'UNDER_REVIEW', label: 'Under Officer Review', icon: Clock },
-  { status: 'APPROVED', label: 'Approved & Disbursed', icon: CheckCircle },
-]
 
 export default function ApplicationDetailPage() {
   const { id } = useParams()
@@ -61,7 +48,7 @@ export default function ApplicationDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-20">
+      <div className="py-20 text-center text-slate-900">
         <Spinner />
       </div>
     )
@@ -69,158 +56,149 @@ export default function ApplicationDetailPage() {
 
   if (error) {
     return (
-      <div className="card text-center py-10">
-        <p className="text-red-600 mb-4">{error}</p>
-        <Link to="/dashboard" className="btn-secondary">Back to Dashboard</Link>
+      <div className="border border-red-300 p-8 bg-red-50 text-red-800 text-left font-mono text-xs space-y-3 shadow-sm">
+        <strong>[RECORD NOT FOUND]</strong>
+        <p>{error}</p>
+        <Link to="/dashboard" className="underline block text-slate-900 font-semibold">← Return to Beneficiary Ledger</Link>
       </div>
     )
   }
 
   const statusCfg = getStatusConfig(app.status)
 
-  // Determine active timeline step
-  const activeTimelineIdx = (() => {
-    if (['APPROVED'].includes(app.status)) return 2
-    if (['UNDER_REVIEW', 'HOLD', 'REQUEST_DOCUMENTS', 'ESCALATED'].includes(app.status)) return 1
-    return 0
+  // Determine stage sequence index
+  const stageIndex = (() => {
+    if (['APPROVED'].includes(app.status)) return 3
+    if (['UNDER_REVIEW', 'HOLD', 'REQUEST_DOCUMENTS', 'ESCALATED'].includes(app.status)) return 2
+    return 1
   })()
 
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Back */}
-      <Link
-        to="/dashboard"
-        className="inline-flex items-center gap-2 text-gov-blue hover:text-gov-navy text-sm font-medium mb-5 transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Dashboard
-      </Link>
-
-      {/* Header card */}
-      <div className="bg-gradient-to-r from-gov-blue to-gov-light-blue rounded-2xl p-6 text-white mb-6 shadow-lg">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div>
-            <p className="text-blue-200 text-xs mb-1">Application Reference</p>
-            <h1 className="text-xl font-bold font-mono">APP-{String(app.id).padStart(6, '0')}</h1>
-            <p className="text-blue-100 mt-1">{app.farmer_name}</p>
-            <p className="text-blue-200 text-sm mt-0.5">{app.scheme_code} Scheme</p>
-          </div>
-          <div className="text-right flex-shrink-0">
-            <div className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold ${statusCfg.color} border`}>
-              <span>{statusCfg.icon}</span>
-              <span>{statusCfg.label}</span>
-            </div>
-            {app.submitted_at && (
-              <p className="text-blue-200 text-xs mt-2">
-                Submitted: {formatDate(app.submitted_at)}
-              </p>
-            )}
-          </div>
-        </div>
+    <div className="max-w-4xl mx-auto space-y-6 text-left font-sans">
+      {/* Return Link & Print Bar */}
+      <div className="flex justify-between items-center border-b border-slate-200 pb-3">
+        <Link
+          to="/dashboard"
+          className="inline-block font-mono text-xs uppercase tracking-wider text-slate-600 hover:text-slate-900 underline transition-colors"
+        >
+          ← Return to Citizen Ledger
+        </Link>
+        <button
+          onClick={() => window.print()}
+          className="border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 px-3 py-1 text-xs font-mono uppercase tracking-wider font-semibold"
+        >
+          Print Acknowledgement ⎙
+        </button>
       </div>
 
-      {/* Status guidance */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3">
-        <Info className="w-5 h-5 text-gov-blue flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="font-semibold text-gov-blue text-sm mb-0.5">Application Status Update</p>
-          <p className="text-sm text-blue-800">{app.citizen_status_message}</p>
+      {/* Main Dossier Header Block */}
+      <div className="border border-slate-300 bg-white shadow-sm overflow-hidden">
+        {/* National tri-color accent line */}
+        <div className="h-1 flex w-full">
+          <div className="bg-[#f97316] w-1/3" />
+          <div className="bg-white w-1/3 border-b border-slate-200" />
+          <div className="bg-[#16a34a] w-1/3" />
         </div>
-      </div>
 
-      {/* Application Progress Timeline */}
-      <div className="card mb-4">
-        <h3 className="font-semibold text-gray-900 mb-5">Application Progress</h3>
-        <div className="flex items-center justify-between">
-          {TIMELINE.map((step, idx) => {
-            const Icon = step.icon
-            const isDone = idx < activeTimelineIdx
-            const isActive = idx === activeTimelineIdx
-            return (
-              <div key={step.status} className="flex items-center flex-1">
-                <div className="flex flex-col items-center gap-1.5 text-center">
-                  <div
-                    className={`w-9 h-9 rounded-full flex items-center justify-center ${
-                      isDone ? 'bg-gov-green text-white' :
-                      isActive ? 'bg-gov-blue text-white ring-4 ring-blue-100' :
-                      'bg-gray-100 text-gray-400'
-                    }`}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <span className={`text-xs font-medium max-w-[72px] ${
-                    isActive ? 'text-gov-blue' : isDone ? 'text-gov-green' : 'text-gray-400'
-                  }`}>
-                    {step.label}
-                  </span>
-                </div>
-                {idx < TIMELINE.length - 1 && (
-                  <div className={`flex-1 h-0.5 mx-2 ${idx < activeTimelineIdx ? 'bg-gov-green' : 'bg-gray-200'}`} />
-                )}
+        <div className="p-6">
+          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 border-b border-slate-200 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-slate-500 font-semibold">
+                  FORM AP-ACK (CLAUSE 5(2)) // ACKNOWLEDGEMENT RECEIPT
+                </span>
               </div>
-            )
-          })}
+              <h1 className="font-serif text-3xl font-bold tracking-tight text-slate-900 mt-1">
+                {app.farmer_name}
+              </h1>
+              <p className="font-mono text-xs text-slate-600 mt-0.5">
+                Application Ref: <strong className="text-slate-900">APP-{String(app.id).padStart(6, '0')}</strong> • Scheme: <strong>{app.scheme_code || 'PM_KISAN'}</strong> • Filed: <strong>{formatDate(app.submitted_at)}</strong>
+              </p>
+            </div>
+
+            <div className="self-start sm:self-auto">
+              <span className={`stamp text-xs px-3 py-1 ${statusCfg.badge}`}>
+                {statusCfg.code} {statusCfg.label}
+              </span>
+            </div>
+          </div>
+
+          {/* Process Stage Sequence Rule */}
+          <div className="grid grid-cols-3 gap-2 mt-5 font-mono text-xs uppercase tracking-wider">
+            <div className={`p-2.5 border transition-colors ${stageIndex >= 1 ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold' : 'border-slate-200 bg-white text-slate-400'}`}>
+              <span className="text-[10px] block text-slate-500">STAGE 01</span>
+              <span>Claim Lodged</span>
+            </div>
+            <div className={`p-2.5 border transition-colors ${stageIndex >= 2 ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold' : 'border-slate-200 bg-white text-slate-400'}`}>
+              <span className="text-[10px] block text-slate-500">STAGE 02</span>
+              <span>Multi-Registry Audit</span>
+            </div>
+            <div className={`p-2.5 border transition-colors ${stageIndex >= 3 ? 'border-emerald-600 bg-emerald-50 text-emerald-900 font-bold' : 'border-slate-200 bg-white text-slate-400'}`}>
+              <span className="text-[10px] block text-slate-500">STAGE 03</span>
+              <span>District Adjudication</span>
+            </div>
+          </div>
+
+          {/* Official Status Message */}
+          <div className="mt-5 border-l-2 border-slate-800 pl-4 py-2.5 bg-slate-50 font-sans text-xs text-slate-700 leading-relaxed">
+            <strong className="font-mono text-[11px] uppercase tracking-wider text-slate-900 block mb-0.5">
+              Official Administrative Dispatch:
+            </strong>
+            {app.citizen_status_message}
+          </div>
         </div>
       </div>
 
-      {/* Personal Details */}
-      <Section title="Personal Information" icon={User}>
-        <DetailRow label="Full Name" value={app.farmer_name} />
-        <DetailRow label="Date of Birth" value={formatDate(app.date_of_birth)} />
-        <DetailRow label="Gender" value={app.gender} />
-        <DetailRow label="Category" value={app.category} />
-      </Section>
+      {/* Grid of Section Dockets (Asymmetric) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Section 1: Demographics */}
+        <SectionDocket title="Identity & Demographic Particulars" code="SCHEDULE-A">
+          <DetailRow label="Legal Name" value={app.farmer_name} />
+          <DetailRow label="Date of Birth" value={formatDate(app.date_of_birth)} mono />
+          <DetailRow label="Gender" value={app.gender} />
+          <DetailRow label="Social Category" value={app.category || 'General'} />
+          <DetailRow label="Masked Aadhaar" value={app.aadhaar_masked || 'XXXX-XXXX-****'} mono />
+          <DetailRow label="Mobile Telephony" value={app.mobile_number} mono />
+        </SectionDocket>
 
-      {/* Contact & Identity */}
-      <Section title="Contact & Identity" icon={ShieldCheck}>
-        <DetailRow label="Mobile Number" value={app.mobile_number} />
-        <DetailRow label="Aadhaar (Masked)" value={app.aadhaar_masked} mono />
-      </Section>
-
-      {/* Bank Details */}
-      <Section title="Bank Account" icon={Landmark}>
-        <DetailRow label="Account Number" value={app.bank_account_number} mono />
-        <DetailRow label="IFSC Code" value={app.ifsc_code} mono />
-      </Section>
-
-      {/* Land Details */}
-      <Section title="Land Parcel" icon={MapPin}>
-        <DetailRow label="Parcel ID" value={app.parcel_id} mono />
-        <DetailRow label="State / District" value={`${app.state_code} / ${app.district_code}`} />
-        <DetailRow label="Tehsil / Village" value={`${app.tehsil_code} / ${app.village_code}`} />
-        <DetailRow label="Khata / Plot" value={`${app.khata_number} / ${app.plot_number}`} />
-        <DetailRow label="Land Area" value={`${app.declared_land_area_ha} Hectares`} />
-        <DetailRow label="Ownership Type" value={app.ownership_type} />
-        {app.declared_crop_code && <DetailRow label="Declared Crop" value={app.declared_crop_code} />}
-      </Section>
-
-      {/* Document */}
-      <Section title="Uploaded Document" icon={FileText}>
-        <DetailRow label="Land Document" value="✅ Document uploaded and on record" />
-      </Section>
-
-      {/* Official Guidance */}
-      <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 mt-2">
-        <h4 className="font-semibold text-amber-900 mb-2 flex items-center gap-2">
-          <Calendar className="w-4 h-4" />
-          Official Government Guidance
-        </h4>
-        <ul className="text-sm text-amber-800 space-y-1.5 list-disc list-inside">
-          <li>PM-KISAN installments are released in April, August, and December each year.</li>
-          <li>Ensure your bank account details are up to date to avoid payment failures.</li>
-          <li>Track your benefit status at <strong>pmkisan.gov.in</strong>.</li>
-          <li>For queries, call PM-KISAN helpline: <strong>155261</strong>.</li>
-          <li>If you need to update details, visit your nearest Common Service Centre (CSC).</li>
-        </ul>
+        {/* Section 2: Bank Details */}
+        <SectionDocket title="Direct Benefit Routing (PFMS/DBT)" code="SCHEDULE-B">
+          <DetailRow label="Bank Account" value={maskBankAccount(app.bank_account_number)} mono />
+          <DetailRow label="Branch IFSC" value={app.ifsc_code} mono />
+          <DetailRow label="Disbursement System" value="PFMS / NPCI DBT Gateway" />
+          <DetailRow label="e-KYC Consent" value="Authenticated on UIDAI Master" />
+          <DetailRow label="Beneficiary Affirmation" value="Affirmed & Signed digitally" />
+        </SectionDocket>
       </div>
 
-      {/* Privacy notice — explicitly no risk score exposed (FARM-03) */}
-      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mt-4 text-xs text-gray-500">
-        <p>
-          <ShieldCheck className="inline w-3.5 h-3.5 mr-1 text-gray-400" />
-          Your application details are protected under the Digital India data protection framework.
-          Internal processing details are not visible to applicants.
+      {/* Full-width Section 3: Land Parcel */}
+      <SectionDocket title="Revenue Land Parcel Record (State Bhulekh Master)" code="SCHEDULE-C">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-1">
+          <DetailRow label="Composite Parcel Ref" value={app.parcel_id} mono />
+          <DetailRow label="State / District" value={`${app.state_code} / ${app.district_code}`} mono />
+          <DetailRow label="Tehsil / Village" value={`${app.tehsil_code} / ${app.village_code}`} mono />
+          <DetailRow label="Khata / Plot No." value={`${app.khata_number} / ${app.plot_number}`} mono />
+          <DetailRow label="Declared Land Area" value={`${app.declared_land_area_ha} Hectares`} mono />
+          <DetailRow label="Ownership Type" value={app.ownership_type || 'Single'} />
+          {app.declared_crop_code && (
+            <DetailRow label="Cultivated Crop" value={app.declared_crop_code} mono />
+          )}
+          <DetailRow label="Revenue Deed Proof" value="Attached & archived in state sub-registry" />
+        </div>
+      </SectionDocket>
+
+      {/* Statutory Guidance */}
+      <div className="border border-slate-300 p-5 bg-slate-50 space-y-2 font-mono text-xs text-slate-700 shadow-sm">
+        <strong className="text-slate-900 uppercase block border-b border-slate-200 pb-1">
+          Statutory PM-KISAN Disbursement Rules &amp; Rights
+        </strong>
+        <p className="leading-relaxed font-sans text-slate-600">
+          Financial support is disbursed directly into authenticated Aadhaar-linked bank accounts in four-monthly tranches (April, August, December). Eligibility is verified against State Bhulekh digitized revenue records and exclusion rolls.
         </p>
+        <div className="text-slate-500 text-[11px] pt-1 flex flex-col sm:flex-row justify-between">
+          <span>Digital Personal Data Protection Act, 2023 Compliant</span>
+          <span>PM-KISAN National Helpline: 155261</span>
+        </div>
       </div>
     </div>
   )

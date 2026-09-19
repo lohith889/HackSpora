@@ -1,52 +1,39 @@
 import { useState, useEffect, useMemo } from 'react'
 import { adminAPI } from '../../api/client'
 import { getRiskTier, getStatusBadge, exportToCSV, formatDateTime } from '../../utils/adminUtils'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import Spinner from '../../components/Spinner'
-import {
-  ShieldAlert, Users, AlertTriangle, CheckCircle, Clock,
-  BarChart2, TrendingUp, Search, Download, RefreshCw,
-  ChevronRight, Filter, Eye, MapPin, ClipboardList, ShieldCheck,
-  CheckCircle2, XCircle, ArrowUpRight
-} from 'lucide-react'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts'
 
-const PIE_COLORS = ['#22c55e', '#eab308', '#ef4444']
+// Settled light theme chart tokens
+const PIE_COLORS = ['#16a34a', '#d97706', '#dc2626']
 
-function KpiCard({ label, value, icon: Icon, color, sub, to }) {
+function KpiBox({ label, value, sub, to, isAccent = false }) {
   const content = (
-    <div className="bg-gray-900 border border-gray-800 hover:border-gray-700 rounded-xl p-5 flex items-start justify-between gap-4 transition-all hover:bg-gray-850 group">
-      <div className="flex items-start gap-4">
-        <div className={`p-3 rounded-lg ${color} flex-shrink-0 shadow-md`}>
-          <Icon className="w-5 h-5 text-white" />
-        </div>
-        <div>
-          <p className="text-gray-400 text-sm font-medium">{label}</p>
-          <p className="text-2xl font-bold text-white mt-0.5 font-mono">{value}</p>
-          {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
-        </div>
+    <div className={`p-4 border transition-colors text-left shadow-none ${
+      isAccent
+        ? 'border-red-300 bg-red-50 text-slate-900'
+        : 'border-slate-300 bg-white hover:border-slate-700 text-slate-900'
+    }`}>
+      <span className={`font-mono text-[10px] uppercase tracking-wider block mb-1 font-semibold ${isAccent ? 'text-red-800' : 'text-slate-600'}`}>
+        {label}
+      </span>
+      <div className={`font-mono text-3xl font-bold tracking-tight ${isAccent ? 'text-red-800' : 'text-slate-900'}`}>
+        {value}
       </div>
-      {to && (
-        <span className="text-gray-600 group-hover:text-blue-400 transition-colors">
-          <ArrowUpRight className="w-4 h-4" />
-        </span>
-      )}
+      {sub && <span className="font-mono text-[11px] text-slate-500 block mt-1">{sub}</span>}
     </div>
   )
-
   return to ? <Link to={to} className="block">{content}</Link> : content
 }
 
 export default function AdminDashboardPage() {
-  const navigate = useNavigate()
   const [apps, setApps] = useState([])
   const [auditLogs, setAuditLogs] = useState([])
   const [loading, setLoading] = useState(true)
-  const [metrics, setMetrics] = useState(null)
-  const [metricsLoading, setMetricsLoading] = useState(false)
 
   const fetchAll = async () => {
     setLoading(true)
@@ -64,36 +51,25 @@ export default function AdminDashboardPage() {
     }
   }
 
-  const fetchMetrics = async () => {
-    setMetricsLoading(true)
-    try {
-      const { data } = await adminAPI.evaluationMetrics()
-      setMetrics(data)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setMetricsLoading(false)
-    }
-  }
-
   useEffect(() => {
     fetchAll()
   }, [])
 
-  // ── KPI computations ─────────────────────────────────────────────────────
+  // KPI computations
   const kpi = useMemo(() => {
     const total = apps.length
-    const high   = apps.filter(a => (a.risk_score ?? 0) > 60).length
-    const medium = apps.filter(a => (a.risk_score ?? 0) > 30 && (a.risk_score ?? 0) <= 60).length
-    const low    = apps.filter(a => (a.risk_score ?? 0) <= 30 && a.risk_score != null).length
+    const critical = apps.filter(a => (a.risk_score ?? 0) >= 75).length
+    const high = apps.filter(a => (a.risk_score ?? 0) >= 50 && (a.risk_score ?? 0) < 75).length
+    const moderate = apps.filter(a => (a.risk_score ?? 0) >= 25 && (a.risk_score ?? 0) < 50).length
+    const low = apps.filter(a => (a.risk_score ?? 0) < 25 && a.risk_score != null).length
     const pending = apps.filter(a => ['SUBMITTED', 'UNDER_REVIEW'].includes(a.status)).length
-    return { total, high, medium, low, pending }
+    return { total, critical, high, moderate, low, pending }
   }, [apps])
 
   const riskDistData = [
-    { name: 'Low Risk (≤30)',    value: kpi.low    },
-    { name: 'Medium Risk (31-60)', value: kpi.medium },
-    { name: 'High Risk (>60)',   value: kpi.high   },
+    { name: 'Low (0-24)', value: kpi.low },
+    { name: 'Moderate (25-49)', value: kpi.moderate },
+    { name: 'Critical/High (≥50)', value: kpi.critical + kpi.high },
   ]
 
   // Top anomaly codes
@@ -104,11 +80,11 @@ export default function AdminDashboardPage() {
     }))
     return Object.entries(freq)
       .sort((a,b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([code, count]) => ({ code: code.replace(/_/g, ' '), count }))
+      .slice(0, 6)
+      .map(([code, count]) => ({ code, count }))
   }, [apps])
 
-  // Geographic concentration (ADM-02)
+  // Geographic concentration
   const districtConcentration = useMemo(() => {
     const distMap = {}
     apps.forEach(a => {
@@ -118,10 +94,11 @@ export default function AdminDashboardPage() {
       }
       distMap[code].total += 1
       distMap[code].avgRiskSum += (a.risk_score || 0)
-      if ((a.risk_score || 0) > 60) {
+      if ((a.risk_score || 0) >= 50) {
         distMap[code].highRisk += 1
       }
     })
+
     return Object.values(distMap)
       .map(d => ({
         district: d.district,
@@ -134,295 +111,288 @@ export default function AdminDashboardPage() {
 
   // Recent high-risk applications
   const recentHighRisk = useMemo(() =>
-    apps.filter(a => (a.risk_score ?? 0) > 60)
+    apps.filter(a => (a.risk_score ?? 0) >= 50)
       .sort((a, b) => (b.risk_score ?? 0) - (a.risk_score ?? 0))
       .slice(0, 5),
     [apps]
   )
 
   return (
-    <div>
-      {/* Page header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="space-y-6 text-left font-sans">
+      {/* Header Block */}
+      <div className="border-b border-slate-200 pb-4 flex flex-col md:flex-row md:items-baseline justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Scheme Officer Overview Dashboard</h1>
-            <span className="bg-red-950 text-red-300 border border-red-800 text-xs px-2.5 py-0.5 rounded-full font-mono font-medium">
-              Live AI Monitor
-            </span>
-          </div>
-          <p className="text-gray-400 text-sm mt-0.5">
-            Real-time subsidy anomaly telemetry, risk concentrations, and officer review queues.
+          <span className="font-mono text-[11px] uppercase tracking-wider text-emerald-800 font-bold block mb-0.5">
+            CENTRAL REGISTRY // TELEMETRY &amp; ADJUDICATION QUEUE REF: PMK-HQ-2026
+          </span>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
+            Subsidy Anomaly Telemetry &amp; Scrutiny Console
+          </h1>
+          <p className="font-mono text-xs text-slate-600 mt-1">
+            Automated Cross-Reconciliation against State Bhulekh, PFMS Banking Gateway, and Statutory Exclusion Lists
           </p>
         </div>
 
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 font-mono text-xs">
           <button
             onClick={fetchAll}
             disabled={loading}
-            className="flex items-center gap-1.5 bg-gray-900 hover:bg-gray-800 text-gray-300 border border-gray-800 px-3 py-2 rounded-lg text-sm transition-colors"
+            className="btn-secondary"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            {loading ? 'Refreshing...' : 'Reload Telemetry ↻'}
           </button>
           <button
             onClick={() => exportToCSV(apps)}
-            className="flex items-center gap-1.5 bg-blue-700 hover:bg-blue-600 text-white px-3.5 py-2 rounded-lg text-sm font-medium transition-colors shadow-md"
+            className="btn-primary"
           >
-            <Download className="w-4 h-4" /> Export CSV ({apps.length})
+            Export Official CSV ({apps.length}) →
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20"><Spinner /></div>
+        <div className="py-20 text-center text-slate-900"><Spinner /></div>
       ) : (
         <>
-          {/* KPI Cards (ADM-01) with Direct Filtering Routes */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5 mb-6">
-            <KpiCard
-              label="Total Applications"
+          {/* Dense KPI Matrix */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            <KpiBox
+              label="01 / Total Claims"
               value={kpi.total}
-              icon={Users}
-              color="bg-blue-700"
+              sub="Claims in Registry"
               to="/admin/applications"
             />
-            <KpiCard
-              label="Critical / High Risk"
-              value={kpi.high}
-              icon={ShieldAlert}
-              color="bg-red-700"
-              sub="Score > 60"
-              to="/admin/applications?min_risk=61"
+            <KpiBox
+              label="02 / Flagged (≥50)"
+              value={kpi.critical + kpi.high}
+              sub="High Scrutiny Alert"
+              isAccent={true}
+              to="/admin/applications?min_risk=50"
             />
-            <KpiCard
-              label="Medium Risk"
-              value={kpi.medium}
-              icon={AlertTriangle}
-              color="bg-yellow-600"
-              sub="Score 31–60"
-              to="/admin/applications?min_risk=31&max_risk=60"
+            <KpiBox
+              label="03 / Moderate (25–49)"
+              value={kpi.moderate}
+              sub="Verification Warranted"
+              to="/admin/applications?min_risk=25&max_risk=49"
             />
-            <KpiCard
-              label="Low Risk (Clean)"
+            <KpiBox
+              label="04 / Low Risk (0–24)"
               value={kpi.low}
-              icon={CheckCircle}
-              color="bg-green-700"
-              sub="Score ≤ 30"
-              to="/admin/applications?max_risk=30"
+              sub="Zero Discrepancy"
+              to="/admin/applications?max_risk=24"
             />
-            <KpiCard
-              label="Pending Adjudication"
+            <KpiBox
+              label="05 / Pending Review"
               value={kpi.pending}
-              icon={Clock}
-              color="bg-purple-700"
-              sub="Requires Officer Decision"
+              sub="Awaiting Determination"
               to="/admin/applications?status=SUBMITTED"
             />
           </div>
 
-          {/* Charts Row: Risk Distribution + Top Anomaly Codes (ADM-02) */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Pie: Risk Distribution */}
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-lg">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
-                  <BarChart2 className="w-4 h-4 text-blue-400" />
-                  Applicant Risk Tier Distribution (0-100)
-                </h3>
-                <span className="text-xs text-gray-500 font-mono">Weighted Multi-Engine</span>
+            <div className="lg:col-span-5 border border-paper-line bg-white p-5">
+              <div className="border-b border-paper-line pb-2 mb-4 flex items-baseline justify-between">
+                <h3 className="font-serif text-base font-bold text-ink">Risk Tier Stratification</h3>
+                <span className="font-mono text-[10px] text-ink-faint uppercase font-semibold">Multi-Engine</span>
               </div>
-              <ResponsiveContainer width="100%" height={230}>
-                <PieChart>
-                  <Pie
-                    data={riskDistData}
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={85}
-                    dataKey="value"
-                    label={({ name, percent }) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
-                    labelLine={false}
-                  >
-                    {riskDistData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ background: '#111827', border: '1px solid #374151', color: '#fff', borderRadius: '8px' }} />
-                  <Legend wrapperStyle={{ color: '#9ca3af', fontSize: '12px' }} />
-                </PieChart>
-              </ResponsiveContainer>
+
+              <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={riskDistData}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={75}
+                      innerRadius={40}
+                      dataKey="value"
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                    >
+                      {riskDistData.map((_, i) => <Cell key={i} fill={PIE_COLORS[i]} />)}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontSize: '11px', fontFamily: 'monospace' }}
+                    />
+                    <Legend wrapperStyle={{ color: '#475569', fontSize: '11px', fontFamily: 'monospace' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="mt-3 pt-3 border-t border-paper-line grid grid-cols-3 gap-2 font-mono text-[11px] text-center">
+                <div>
+                  <span className="text-ink-muted block text-[10px]">LOW</span>
+                  <span className="text-emerald-700 font-bold">{kpi.low}</span>
+                </div>
+                <div>
+                  <span className="text-ink-muted block text-[10px]">MOD</span>
+                  <span className="text-amber-700 font-bold">{kpi.moderate}</span>
+                </div>
+                <div>
+                  <span className="text-ink-muted block text-[10px]">HIGH/CRIT</span>
+                  <span className="text-accent font-bold">{kpi.critical + kpi.high}</span>
+                </div>
+              </div>
             </div>
 
-            {/* Bar: Top Triggered Anomaly Flags */}
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-lg">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-orange-400" />
-                  Top Triggered Anomaly Flags
-                </h3>
-                <span className="text-xs text-gray-500 font-mono">Frequency Count</span>
+            {/* Top Anomaly Flags */}
+            <div className="lg:col-span-7 border border-paper-line bg-white p-5">
+              <div className="border-b border-paper-line pb-2 mb-4 flex items-baseline justify-between">
+                <h3 className="font-serif text-base font-bold text-ink">Top Anomaly Triggers</h3>
+                <span className="font-mono text-[10px] text-ink-faint uppercase font-semibold">Frequency Count</span>
               </div>
+
               {flagFrequency.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-12">No anomaly flags recorded yet</p>
+                <p className="font-mono text-xs text-ink-faint py-12 text-center">[ NO FLAGS LOGGED ]</p>
               ) : (
-                <ResponsiveContainer width="100%" height={230}>
-                  <BarChart data={flagFrequency} layout="vertical" margin={{ left: 10, right: 20 }}>
-                    <XAxis type="number" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                    <YAxis type="category" dataKey="code" tick={{ fill: '#9ca3af', fontSize: 10 }} width={140} />
-                    <Tooltip contentStyle={{ background: '#111827', border: '1px solid #374151', color: '#fff', borderRadius: '8px' }} />
-                    <Bar dataKey="count" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="space-y-3 font-mono text-xs">
+                  {flagFrequency.map((f, i) => {
+                    const maxCount = Math.max(...flagFrequency.map(x => x.count), 1)
+                    const pct = Math.round((f.count / maxCount) * 100)
+                    return (
+                      <div key={f.code} className="space-y-1">
+                        <div className="flex justify-between text-[11px]">
+                          <span className="text-ink font-semibold">{f.code}</span>
+                          <span className="text-ink-muted">{f.count} Claims</span>
+                        </div>
+                        <div className="w-full bg-paper-subtle border border-paper-line h-2">
+                          <div
+                            className={`h-2 ${i === 0 ? 'bg-accent' : 'bg-slate-700'}`}
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               )}
             </div>
           </div>
 
-          {/* Geographic Concentration (District-level) (ADM-02) */}
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 mb-6 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-white font-semibold text-sm flex items-center gap-2">
-                <MapPin className="w-4 h-4 text-emerald-400" />
-                Geographic Risk Concentration (By District)
-              </h3>
-              <span className="text-xs text-gray-500 font-mono">Applications &amp; Avg Risk Score</span>
+          {/* District Concentration */}
+          <div className="border border-paper-line bg-white p-5">
+            <div className="border-b border-paper-line pb-2 mb-4 flex items-baseline justify-between">
+              <h3 className="font-serif text-base font-bold text-ink">Geographic Concentration by Revenue District</h3>
+              <span className="font-mono text-[10px] text-ink-faint uppercase font-semibold">Census &amp; Bhulekh Mapping</span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
               {districtConcentration.slice(0, 3).map((d) => (
-                <div key={d.district} className="bg-gray-800/60 border border-gray-800 rounded-lg p-3 flex items-center justify-between">
+                <div key={d.district} className="border border-paper-line p-3 bg-paper-subtle font-mono text-xs flex justify-between items-baseline">
                   <div>
-                    <span className="text-xs text-gray-400 font-mono uppercase">District {d.district}</span>
-                    <p className="text-lg font-bold text-white font-mono mt-0.5">{d.applications} Claims</p>
+                    <span className="text-ink-muted uppercase text-[10px] block font-semibold">DISTRICT</span>
+                    <strong className="text-ink text-base">{d.district}</strong>
+                    <span className="text-ink-faint block mt-0.5">{d.applications} Claims</span>
                   </div>
                   <div className="text-right">
-                    <span className="text-[11px] text-gray-500">Avg Risk</span>
-                    <p className={`text-sm font-bold font-mono ${d.avgRisk > 50 ? 'text-red-400' : 'text-yellow-400'}`}>
-                      {d.avgRisk}/100
-                    </p>
+                    <span className="text-ink-muted uppercase text-[10px] block font-semibold">AVG RISK</span>
+                    <span className={`text-sm font-bold ${d.avgRisk >= 50 ? 'text-accent' : 'text-ink'}`}>
+                      {d.avgRisk} / 100
+                    </span>
                   </div>
                 </div>
               ))}
             </div>
 
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={districtConcentration} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis dataKey="district" tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                <YAxis tick={{ fill: '#9ca3af', fontSize: 11 }} />
-                <Tooltip contentStyle={{ background: '#111827', border: '1px solid #374151', color: '#fff', borderRadius: '8px' }} />
-                <Bar dataKey="applications" name="Total Applications" fill="#6366f1" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="avgRisk" name="Avg Risk Score" fill="#ef4444" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="h-[160px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={districtConcentration} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <XAxis dataKey="district" stroke="#94a3b8" tick={{ fill: '#475569', fontSize: 11, fontFamily: 'monospace' }} />
+                  <YAxis stroke="#94a3b8" tick={{ fill: '#475569', fontSize: 11, fontFamily: 'monospace' }} />
+                  <Tooltip
+                    contentStyle={{ background: '#ffffff', border: '1px solid #cbd5e1', color: '#0f172a', fontSize: '11px', fontFamily: 'monospace' }}
+                  />
+                  <Bar dataKey="applications" name="Claims" fill="#64748b" />
+                  <Bar dataKey="avgRisk" name="Avg Risk" fill="#b91c1c" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
 
-          {/* Bottom Row: Recent High Risk + Live Audit Feed */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-            {/* Recent High-Risk Table */}
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
-                  <ShieldAlert className="w-4 h-4 text-red-400" />
-                  Priority Review Queue (High Risk)
-                </h3>
-                <Link
-                  to="/admin/applications?min_risk=61"
-                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                >
-                  View all <ChevronRight className="w-3.5 h-3.5" />
+          {/* Bottom Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            {/* Priority Review Queue */}
+            <div className="border border-paper-line bg-white p-5">
+              <div className="border-b border-paper-line pb-2 mb-4 flex items-baseline justify-between">
+                <h3 className="font-serif text-base font-bold text-accent">Priority Review Docket (High Risk)</h3>
+                <Link to="/admin/applications?min_risk=50" className="font-mono text-xs text-ink-muted hover:text-ink underline">
+                  View All Flagged →
                 </Link>
               </div>
 
               {recentHighRisk.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-8">No high-risk claims currently pending.</p>
+                <p className="font-mono text-xs text-ink-faint py-8 text-center">[ NO CRITICAL CLAIMS PENDING ]</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-left font-mono text-xs">
                     <thead>
-                      <tr className="border-b border-gray-800 text-gray-500 text-[11px] uppercase tracking-wider">
-                        <th className="text-left py-2 pr-3">Ref</th>
-                        <th className="text-left py-2 pr-3">Applicant</th>
-                        <th className="text-left py-2 pr-3">Risk</th>
-                        <th className="text-left py-2 pr-3">Status</th>
-                        <th className="text-right py-2">Action</th>
+                      <tr className="border-b border-paper-line text-ink-muted uppercase text-[10px] tracking-wider">
+                        <th className="py-2 pr-3 font-semibold">Ref ID</th>
+                        <th className="py-2 pr-3 font-semibold">Applicant</th>
+                        <th className="py-2 pr-3 font-semibold">Score</th>
+                        <th className="py-2 text-right font-semibold">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-800/40">
-                      {recentHighRisk.map((a) => {
-                        const tier = getRiskTier(a.risk_score)
-                        const st = getStatusBadge(a.status)
-                        return (
-                          <tr key={a.id} className="hover:bg-gray-800/30 transition-colors">
-                            <td className="py-2.5 pr-3 font-mono text-xs text-blue-300">
-                              APP-{String(a.id).padStart(6, '0')}
-                            </td>
-                            <td className="py-2.5 pr-3 text-white text-xs font-medium max-w-[130px] truncate">
-                              {a.farmer_name}
-                            </td>
-                            <td className="py-2.5 pr-3">
-                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${tier.color}`}>
-                                <span className={`w-1.5 h-1.5 rounded-full ${tier.dot}`} />
-                                {a.risk_score}
-                              </span>
-                            </td>
-                            <td className="py-2.5 pr-3">
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${st.color}`}>
-                                {st.label}
-                              </span>
-                            </td>
-                            <td className="py-2.5 text-right">
-                              <Link
-                                to={`/admin/applications/${a.id}`}
-                                className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-medium bg-blue-950/40 px-2 py-1 rounded border border-blue-800/40"
-                              >
-                                <Eye className="w-3 h-3" /> Dossier
-                              </Link>
-                            </td>
-                          </tr>
-                        )
-                      })}
+                    <tbody className="divide-y divide-paper-line">
+                      {recentHighRisk.map((a) => (
+                        <tr key={a.id} className="hover:bg-paper-subtle transition-colors">
+                          <td className="py-2.5 pr-3 text-ink font-semibold">
+                            APP-{String(a.id).padStart(6, '0')}
+                          </td>
+                          <td className="py-2.5 pr-3 text-ink-muted font-sans truncate max-w-[130px]">
+                            {a.farmer_name}
+                          </td>
+                          <td className="py-2.5 pr-3">
+                            <span className="stamp border border-accent-border bg-accent-subtle text-accent font-bold text-[10px]">
+                              {a.risk_score} / 100
+                            </span>
+                          </td>
+                          <td className="py-2.5 text-right">
+                            <Link
+                              to={`/admin/applications/${a.id}`}
+                              className="border border-paper-strong hover:border-ink text-ink px-2 py-1 text-[11px] uppercase tracking-wider"
+                            >
+                              Inspect →
+                            </Link>
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
               )}
             </div>
 
-            {/* Recent Officer Adjudications Feed (ADM-06) */}
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-white font-semibold text-sm flex items-center gap-2">
-                  <ClipboardList className="w-4 h-4 text-purple-400" />
-                  Recent Scheme Officer Adjudications
-                </h3>
-                <Link
-                  to="/admin/audit-logs"
-                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
-                >
-                  Full Audit Log <ChevronRight className="w-3.5 h-3.5" />
+            {/* Recent Officer Adjudications Feed */}
+            <div className="border border-paper-line bg-white p-5">
+              <div className="border-b border-paper-line pb-2 mb-4 flex items-baseline justify-between">
+                <h3 className="font-serif text-base font-bold text-ink">Immutable Decision Log</h3>
+                <Link to="/admin/audit-logs" className="font-mono text-xs text-ink-muted hover:text-ink underline">
+                  Full Audit Trail →
                 </Link>
               </div>
 
               {auditLogs.length === 0 ? (
-                <p className="text-gray-500 text-sm text-center py-8">No officer adjudications recorded yet.</p>
+                <p className="font-mono text-xs text-ink-faint py-8 text-center">[ NO ADJUDICATION LOGS RECORDED ]</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2.5 font-mono text-xs">
                   {auditLogs.slice(0, 4).map((log) => (
-                    <div key={log.id} className="bg-gray-800/60 border border-gray-800 rounded-lg p-3 text-xs">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-blue-300 font-medium">
-                            APP-{String(log.application_id).padStart(6, '0')}
-                          </span>
-                          <span className="bg-gray-700 px-2 py-0.5 rounded text-white font-semibold text-[10px]">
-                            {log.action}
-                          </span>
-                        </div>
-                        <span className="text-gray-500 text-[10px] font-mono">
-                          {formatDateTime(log.created_at)}
+                    <div key={log.id} className="border border-paper-line p-3 bg-paper-subtle space-y-1">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-ink font-bold">APP-{String(log.application_id).padStart(6, '0')}</span>
+                        <span className="stamp border border-paper-strong text-ink text-[10px] bg-white">
+                          {log.action}
                         </span>
                       </div>
-                      <p className="text-gray-300 line-clamp-1 italic">
-                        "{log.remarks || 'No justification entered'}"
+                      <p className="text-ink-muted text-[11px] font-sans italic truncate">
+                        "{log.remarks || 'Official determination recorded'}"
                       </p>
-                      <p className="text-gray-500 text-[10px] mt-1">
-                        Decided by: <span className="text-gray-300">{log.admin_name || `Officer #${log.admin_id}`}</span>
-                      </p>
+                      <div className="flex justify-between text-[10px] text-ink-faint pt-0.5">
+                        <span>By: {log.admin_name || `Officer #${log.admin_id}`}</span>
+                        <span>{formatDateTime(log.created_at)}</span>
+                      </div>
                     </div>
                   ))}
                 </div>

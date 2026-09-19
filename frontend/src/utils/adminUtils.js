@@ -1,40 +1,68 @@
 /**
- * Shared admin utilities — risk tier colours, severity badges, CSV export
+ * Shared admin utilities — Settled light theme design tokens
+ * Crisp readable contrast. No glow, no dark violet.
  */
 
 export const RISK_TIER = {
-  low:    { label: 'Low Risk',      color: 'bg-green-900/40 text-green-300 border border-green-700',   dot: 'bg-green-400'  },
-  medium: { label: 'Medium Risk',   color: 'bg-yellow-900/40 text-yellow-300 border border-yellow-700', dot: 'bg-yellow-400' },
-  high:   { label: 'High Risk',     color: 'bg-red-900/40 text-red-300 border border-red-700',          dot: 'bg-red-400'    },
-  none:   { label: 'No Score',      color: 'bg-gray-800 text-gray-400 border border-gray-700',          dot: 'bg-gray-500'   },
+  low: {
+    label: 'Low Risk',
+    color: 'border border-emerald-300 bg-emerald-50 text-emerald-900 font-medium',
+    dot: 'bg-emerald-600',
+    indicator: 'LOW',
+  },
+  moderate: {
+    label: 'Moderate Risk',
+    color: 'border border-amber-300 bg-amber-50 text-amber-900 font-semibold',
+    dot: 'bg-amber-600',
+    indicator: 'MOD',
+  },
+  high: {
+    label: 'High Risk',
+    color: 'border border-orange-300 bg-orange-50 text-orange-900 font-bold',
+    dot: 'bg-orange-600',
+    indicator: 'HIGH',
+  },
+  critical: {
+    label: 'Critical Risk',
+    color: 'border border-red-400 bg-red-50 text-red-900 font-mono font-bold',
+    dot: 'bg-red-600',
+    indicator: 'CRIT',
+  },
+  none: {
+    label: 'Unscored',
+    color: 'border border-slate-300 bg-slate-100 text-slate-600',
+    dot: 'bg-slate-400',
+    indicator: '—',
+  },
 }
 
 export function getRiskTier(score) {
   if (score == null) return RISK_TIER.none
-  if (score <= 30)   return RISK_TIER.low
-  if (score <= 60)   return RISK_TIER.medium
-  return RISK_TIER.high
+  if (score >= 75) return RISK_TIER.critical
+  if (score >= 50) return RISK_TIER.high
+  if (score >= 25) return RISK_TIER.moderate
+  return RISK_TIER.low
 }
 
 export const SEVERITY_COLORS = {
-  Low:      'bg-blue-900/50 text-blue-300 border border-blue-700',
-  Medium:   'bg-yellow-900/50 text-yellow-300 border border-yellow-700',
-  High:     'bg-orange-900/50 text-orange-300 border border-orange-700',
-  Critical: 'bg-red-900/60 text-red-200 border border-red-600',
+  Low: 'border border-slate-300 text-slate-700 bg-slate-100',
+  Medium: 'border border-amber-300 text-amber-800 bg-amber-50 font-medium',
+  High: 'border border-orange-300 text-orange-800 bg-orange-50 font-bold',
+  Critical: 'border border-red-300 text-red-800 bg-red-50 font-bold',
 }
 
 export const STATUS_LABELS = {
-  SUBMITTED:           { label: 'Submitted',              color: 'bg-blue-900/40 text-blue-300 border border-blue-700' },
-  UNDER_REVIEW:        { label: 'Under Review',           color: 'bg-yellow-900/40 text-yellow-300 border border-yellow-700' },
-  APPROVED:            { label: 'Approved',               color: 'bg-green-900/40 text-green-300 border border-green-700' },
-  REJECTED:            { label: 'Rejected',               color: 'bg-red-900/40 text-red-300 border border-red-700' },
-  PAYMENT_HELD:        { label: 'Payment Held',           color: 'bg-orange-900/40 text-orange-300 border border-orange-700' },
-  DOCUMENTS_REQUESTED: { label: 'Documents Requested',   color: 'bg-purple-900/40 text-purple-300 border border-purple-700' },
-  ESCALATED:           { label: 'Escalated',             color: 'bg-gray-700 text-gray-200 border border-gray-500' },
+  SUBMITTED: { label: 'SUBMITTED', color: 'border border-slate-300 bg-slate-100 text-slate-800' },
+  UNDER_REVIEW: { label: 'UNDER REVIEW', color: 'border border-amber-300 bg-amber-50 text-amber-900 font-medium' },
+  APPROVED: { label: 'APPROVED', color: 'border border-emerald-300 bg-emerald-50 text-emerald-900 font-bold' },
+  REJECTED: { label: 'REJECTED', color: 'border border-red-300 bg-red-50 text-red-900 font-bold' },
+  PAYMENT_HELD: { label: 'PAYMENT HELD', color: 'border border-amber-400 bg-amber-50 text-amber-900 font-bold' },
+  DOCUMENTS_REQUESTED: { label: 'DOCS REQUESTED', color: 'border border-slate-400 bg-slate-100 text-slate-900 font-mono font-bold' },
+  ESCALATED: { label: 'ESCALATED', color: 'border border-rose-300 bg-rose-50 text-rose-900 font-bold' },
 }
 
 export function getStatusBadge(status) {
-  return STATUS_LABELS[status] || { label: status, color: 'bg-gray-800 text-gray-400 border border-gray-700' }
+  return STATUS_LABELS[status] || { label: status, color: 'border border-slate-300 text-slate-700 bg-slate-100' }
 }
 
 export function formatDate(d) {

@@ -4,7 +4,6 @@ import { useAuth } from '../context/AuthContext'
 import { applicationAPI } from '../api/client'
 import ApplicationCard from '../components/ApplicationCard'
 import Spinner from '../components/Spinner'
-import { FilePlus, Inbox, RefreshCw, User, Phone, Calendar } from 'lucide-react'
 import { formatDate } from '../utils/statusUtils'
 
 export default function DashboardPage() {
@@ -20,7 +19,7 @@ export default function DashboardPage() {
       const { data } = await applicationAPI.myApplications()
       setApps(data)
     } catch (err) {
-      setError('Failed to load your applications. Please try refreshing.')
+      setError('Failed to load application ledger. Please try refreshing.')
     } finally {
       setLoading(false)
     }
@@ -31,105 +30,134 @@ export default function DashboardPage() {
   }, [])
 
   return (
-    <div>
-      {/* Welcome banner */}
-      <div className="bg-gradient-to-r from-gov-blue to-gov-light-blue rounded-2xl p-6 text-white mb-6 shadow-lg">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">
-              Jai Kisan! 🌾 {user?.full_name?.split(' ')[0] || 'Farmer'}
-            </h1>
-            <p className="text-blue-100 text-sm">
-              Welcome to the PM-KISAN Pradhan Mantri Kisan Samman Nidhi application portal.
-            </p>
-            {/* User profile summary */}
-            <div className="flex flex-wrap gap-4 mt-3 text-blue-100 text-sm">
-              <span className="flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5" />
-                {user?.email}
-              </span>
-              {user?.mobile_number && (
-                <span className="flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5" />
-                  {user.mobile_number}
+    <div className="space-y-6 text-left font-sans">
+      {/* Editorial Header Block (Asymmetric & Bordered) */}
+      <div className="border border-slate-300 bg-white shadow-sm overflow-hidden">
+        {/* National tri-color accent line */}
+        <div className="h-1 flex w-full">
+          <div className="bg-[#f97316] w-1/3" />
+          <div className="bg-white w-1/3 border-b border-slate-200" />
+          <div className="bg-[#16a34a] w-1/3" />
+        </div>
+
+        <div className="p-6">
+          <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 border-b border-slate-200 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                  PM-KISAN BENEFICIARY SERVICES // कृषक सेवा पोर्टल
                 </span>
-              )}
-              {user?.date_of_birth && (
-                <span className="flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" />
-                  DOB: {formatDate(user.date_of_birth)}
+                <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-bold">
+                  AUTHENTICATED CITIZEN
                 </span>
-              )}
+              </div>
+              <h1 className="font-serif text-3xl font-bold tracking-tight text-slate-900 mt-1">
+                {user?.full_name || 'Registered Cultivator'}
+              </h1>
+              <p className="font-sans text-xs text-slate-600 mt-0.5">
+                Pradhan Mantri Kisan Samman Nidhi (PM-KISAN) • Direct Benefit Transfer Portal
+              </p>
             </div>
+
+            <Link
+              to="/apply"
+              className="bg-emerald-900 hover:bg-emerald-800 text-white self-start md:self-auto py-2.5 px-5 text-xs font-mono font-bold uppercase tracking-wider transition-colors shadow-sm"
+            >
+              + Lodge New Claim (Form A-1) →
+            </Link>
           </div>
-          <Link
-            to="/apply"
-            className="flex items-center gap-2 bg-gov-saffron hover:bg-orange-600 text-white font-semibold px-5 py-3 rounded-xl transition-colors shadow-md flex-shrink-0"
-          >
-            <FilePlus className="w-5 h-5" />
-            Apply for PM-KISAN
-          </Link>
+
+          {/* Monospace User Metadata Rule */}
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-2 mt-4 font-mono text-xs text-slate-600">
+            <span>REGISTRATION EMAIL: <strong className="text-slate-900">{user?.email || '—'}</strong></span>
+            {user?.mobile_number && (
+              <span>MOBILE: <strong className="text-slate-900">{user.mobile_number}</strong></span>
+            )}
+            {user?.date_of_birth && (
+              <span>DATE OF BIRTH: <strong className="text-slate-900">{formatDate(user.date_of_birth)}</strong></span>
+            )}
+            <span>KYC STATUS: <strong className="text-emerald-800 font-bold">VERIFIED ON RECORD</strong></span>
+          </div>
         </div>
       </div>
 
-      {/* Info Banner */}
-      <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 text-sm text-green-800">
-        <strong>PM-KISAN Scheme:</strong> Under this scheme, eligible farmer families receive ₹6,000 per year
-        in three equal installments of ₹2,000 directly to their bank accounts.
+      {/* Statutory Scheme Parameter Rule */}
+      <div className="border border-slate-300 p-4 bg-slate-50 font-mono text-xs leading-relaxed text-slate-700 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div>
+          <strong className="text-slate-900 uppercase font-bold">Statutory Entitlement (Clause 3):</strong>{' '}
+          Financial assistance of ₹6,000/- per annum in three equal 4-monthly installments of ₹2,000/- credited directly into authenticated Aadhaar-linked bank accounts via PFMS/DBT.
+        </div>
+        <span className="text-[10px] text-slate-500 uppercase border border-slate-200 px-2 py-1 bg-white font-semibold whitespace-nowrap">
+          F.No. 1-1/2019-Credit-I
+        </span>
       </div>
 
       {/* Applications Section */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold text-gray-900">
-          My Applications
-          {!loading && (
-            <span className="ml-2 text-sm text-gray-400 font-normal">({apps.length})</span>
-          )}
-        </h2>
-        <button
-          onClick={fetchApplications}
-          disabled={loading}
-          className="flex items-center gap-1.5 text-sm text-gov-blue hover:text-gov-navy font-medium transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+      <div>
+        <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-4">
+          <div className="flex items-baseline gap-3">
+            <h2 className="font-serif text-xl font-bold text-slate-900">
+              Submitted Benefit Claims &amp; Application Dockets
+            </h2>
+            {!loading && (
+              <span className="font-mono text-xs text-slate-600 font-semibold border border-slate-200 px-2 py-0.5 bg-slate-50">
+                {apps.length} {apps.length === 1 ? 'RECORD' : 'RECORDS'}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={fetchApplications}
+            disabled={loading}
+            className="font-mono text-xs uppercase tracking-wider text-slate-600 hover:text-slate-900 underline transition-colors"
+          >
+            {loading ? 'Refreshing...' : 'Reload Ledger ↻'}
+          </button>
+        </div>
+
+        {loading ? (
+          <div className="py-16 text-center text-slate-900">
+            <Spinner />
+          </div>
+        ) : error ? (
+          <div className="border border-red-300 bg-red-50 text-red-800 p-4 font-mono text-xs">
+            <strong>[ERROR]</strong> {error}
+            <button onClick={fetchApplications} className="ml-3 underline font-semibold">
+              Retry
+            </button>
+          </div>
+        ) : apps.length === 0 ? (
+          <div className="border border-slate-300 p-10 text-left bg-white space-y-4 shadow-sm">
+            <span className="font-mono text-xs uppercase tracking-widest text-slate-500 block font-semibold">
+              [ LEDGER EMPTY // NO RECORD DETECTED ]
+            </span>
+            <h3 className="font-serif text-xl font-bold text-slate-900">
+              No Cultivator Claims Filed Under This Beneficiary Profile
+            </h3>
+            <p className="text-sm text-slate-600 max-w-lg leading-relaxed font-sans">
+              You have not yet lodged an agricultural land parcel claim for PM-KISAN subsidy verification. Click below to start your digital application with instant State Bhulekh and PFMS cross-verification.
+            </p>
+            <div className="pt-2">
+              <Link
+                to="/apply"
+                className="bg-emerald-900 hover:bg-emerald-800 text-white font-mono text-xs uppercase tracking-wider font-bold py-2.5 px-5 inline-block transition-colors"
+              >
+                Initiate New Subsidy Application (Form A-1) →
+              </Link>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {apps.map((app) => (
+              <ApplicationCard key={app.id} app={app} />
+            ))}
+          </div>
+        )}
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Spinner />
-        </div>
-      ) : error ? (
-        <div className="card text-center py-8">
-          <p className="text-red-600 mb-3">{error}</p>
-          <button onClick={fetchApplications} className="btn-secondary">Retry</button>
-        </div>
-      ) : apps.length === 0 ? (
-        <div className="card text-center py-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gray-100 rounded-full mb-4">
-            <Inbox className="w-8 h-8 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">No Applications Yet</h3>
-          <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">
-            You have not submitted any PM-KISAN applications. Click below to start your application.
-          </p>
-          <Link to="/apply" className="btn-primary">
-            Start PM-KISAN Application
-          </Link>
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
-          {apps.map((app) => (
-            <ApplicationCard key={app.id} app={app} />
-          ))}
-        </div>
-      )}
-
-      {/* Help footer */}
-      <div className="mt-8 bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-800">
-        <strong>Need Help?</strong> Contact the PM-KISAN helpline at{' '}
-        <strong>155261</strong> or visit your nearest Common Service Centre (CSC).
+      {/* Official Assistance Notice */}
+      <div className="border-t border-slate-200 pt-4 font-mono text-xs text-slate-500 flex flex-col sm:flex-row justify-between gap-2">
+        <span>PM-KISAN TOLL FREE HELPLINE: <strong className="text-slate-900">155261</strong> / <strong className="text-slate-900">011-24300606</strong></span>
+        <span>COMMON SERVICE CENTRE (CSC) KIOSK ASSISTANCE ENABLED</span>
       </div>
     </div>
   )

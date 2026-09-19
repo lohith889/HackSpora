@@ -1,21 +1,16 @@
 import { useState, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { applicationAPI } from '../api/client'
-import {
-  User, Phone, ShieldCheck, Landmark, MapPin,
-  UploadCloud, ClipboardCheck, CheckCircle, AlertCircle,
-  ChevronLeft, ChevronRight, X, FileText
-} from 'lucide-react'
 
 // ── Step metadata ────────────────────────────────────────────────────────────
 const STEPS = [
-  { id: 'personal',     label: 'Personal Info',    icon: User },
-  { id: 'otp',          label: 'Mobile OTP',       icon: Phone },
-  { id: 'identity',     label: 'Aadhaar / KYC',   icon: ShieldCheck },
-  { id: 'bank',         label: 'Bank Details',     icon: Landmark },
-  { id: 'land',         label: 'Land Parcel',      icon: MapPin },
-  { id: 'document',     label: 'Upload Document',  icon: UploadCloud },
-  { id: 'declaration',  label: 'Declaration',      icon: ClipboardCheck },
+  { id: 'personal',    code: '01', label: 'Personal' },
+  { id: 'otp',         code: '02', label: 'Mobile OTP' },
+  { id: 'identity',    code: '03', label: 'Aadhaar / KYC' },
+  { id: 'bank',        code: '04', label: 'DBT Bank' },
+  { id: 'land',        code: '05', label: 'Land Parcel' },
+  { id: 'document',    code: '06', label: 'Revenue Deed' },
+  { id: 'declaration', code: '07', label: 'Affirmation' },
 ]
 
 const GENDER_OPTIONS = ['Male', 'Female', 'Other']
@@ -25,45 +20,39 @@ const CROP_CODES = ['WHEAT', 'RICE', 'MAIZE', 'SUGARCANE', 'COTTON', 'SOYBEAN', 
 const ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/png']
 const MAX_FILE_MB = 5
 
-// Step progress bar
-function StepBar({ currentStep }) {
+// ── Monospaced Step Ledger Header ─────────────────────────────────────────────
+function StepBar({ currentStep, onSelectStep }) {
   return (
-    <div className="flex items-center justify-between mb-8 overflow-x-auto pb-2">
-      {STEPS.map((step, idx) => {
-        const Icon = step.icon
-        const status = idx < currentStep ? 'done' : idx === currentStep ? 'active' : 'pending'
-        return (
-          <div key={step.id} className="flex items-center flex-shrink-0">
-            <div className="flex flex-col items-center gap-1">
-              <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center transition-all ${
-                  status === 'done'
-                    ? 'bg-gov-green text-white'
-                    : status === 'active'
-                    ? 'bg-gov-blue text-white ring-4 ring-blue-100'
-                    : 'bg-gray-100 text-gray-400'
+    <div className="border border-paper-line p-2 bg-paper-subtle mb-8 overflow-x-auto">
+      <div className="flex items-center gap-1.5 min-w-[650px] font-mono text-xs uppercase tracking-wider">
+        {STEPS.map((step, idx) => {
+          const isCurrent = idx === currentStep
+          const isDone = idx < currentStep
+          return (
+            <div key={step.id} className="flex-1 flex items-center">
+              <button
+                type="button"
+                onClick={() => isDone && onSelectStep(idx)}
+                disabled={!isDone}
+                className={`w-full text-left px-3 py-2 border transition-colors ${
+                  isCurrent
+                    ? 'border-paper-strong bg-paper text-ink font-bold border-l-2 border-l-accent'
+                    : isDone
+                    ? 'border-paper-line bg-paper text-ink-muted hover:border-paper-strong cursor-pointer'
+                    : 'border-transparent text-ink-faint cursor-not-allowed opacity-60'
                 }`}
               >
-                {status === 'done' ? <CheckCircle className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
-              </div>
-              <span
-                className={`text-xs font-medium hidden sm:block ${
-                  status === 'active' ? 'text-gov-blue' : status === 'done' ? 'text-gov-green' : 'text-gray-400'
-                }`}
-              >
-                {step.label}
-              </span>
+                <span className={`block text-[10px] font-mono ${isCurrent ? 'text-accent font-semibold' : isDone ? 'text-gov' : 'text-ink-faint'}`}>
+                  {isCurrent ? '● CURRENT' : isDone ? '✓ DONE' : '— PENDING'}
+                </span>
+                <span className="truncate block mt-0.5">
+                  {step.code} {step.label}
+                </span>
+              </button>
             </div>
-            {idx < STEPS.length - 1 && (
-              <div
-                className={`h-0.5 w-6 sm:w-12 mx-1 flex-shrink-0 transition-colors ${
-                  idx < currentStep ? 'bg-gov-green' : 'bg-gray-200'
-                }`}
-              />
-            )}
-          </div>
-        )
-      })}
+          )
+        })}
+      </div>
     </div>
   )
 }
@@ -72,33 +61,63 @@ function StepBar({ currentStep }) {
 
 function PersonalStep({ data, onChange, errors }) {
   return (
-    <div className="space-y-4">
-      <h3 className="font-semibold text-gray-800 text-lg">Personal Information</h3>
-      <p className="text-sm text-gray-500">Enter details exactly as they appear on your Aadhaar card.</p>
-      <div>
-        <label className="form-label">Full Name (as per Aadhaar) *</label>
-        <input type="text" name="farmer_name" value={data.farmer_name} onChange={onChange}
-          className={`form-input ${errors.farmer_name ? 'border-red-400' : ''}`}
-          placeholder="e.g., Ramesh Kumar Singh" required />
-        {errors.farmer_name && <p className="text-red-500 text-xs mt-1">{errors.farmer_name}</p>}
+    <div className="space-y-5 text-left">
+      <div className="border-b border-paper-line pb-3">
+        <h3 className="font-serif text-xl font-bold text-ink">01. Applicant Personal Particulars</h3>
+        <p className="font-mono text-xs text-ink-faint mt-1">
+          Identity details must strictly correspond with the demographic records registered on UIDAI Aadhaar.
+        </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+      <div>
+        <label className="form-label">Farmer Full Legal Name (as on Aadhaar) *</label>
+        <input
+          type="text"
+          name="farmer_name"
+          value={data.farmer_name}
+          onChange={onChange}
+          className={`form-input ${errors.farmer_name ? 'border-accent' : ''}`}
+          placeholder="e.g. Ramesh Kumar"
+          required
+        />
+        {errors.farmer_name && <p className="text-accent font-mono text-xs mt-1">[ERROR] {errors.farmer_name}</p>}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
         <div>
           <label className="form-label">Date of Birth *</label>
-          <input type="date" name="date_of_birth" value={data.date_of_birth} onChange={onChange}
-            className={`form-input ${errors.date_of_birth ? 'border-red-400' : ''}`} required />
-          {errors.date_of_birth && <p className="text-red-500 text-xs mt-1">{errors.date_of_birth}</p>}
+          <input
+            type="date"
+            name="date_of_birth"
+            value={data.date_of_birth}
+            onChange={onChange}
+            className={`form-input ${errors.date_of_birth ? 'border-accent' : ''}`}
+            required
+          />
+          {errors.date_of_birth && <p className="text-accent font-mono text-xs mt-1">[ERROR] {errors.date_of_birth}</p>}
         </div>
         <div>
-          <label className="form-label">Gender *</label>
-          <select name="gender" value={data.gender} onChange={onChange} className="form-input" required>
+          <label className="form-label">Gender Classification *</label>
+          <select
+            name="gender"
+            value={data.gender}
+            onChange={onChange}
+            className="form-input bg-paper"
+            required
+          >
             {GENDER_OPTIONS.map((g) => <option key={g} value={g}>{g}</option>)}
           </select>
         </div>
       </div>
+
       <div>
-        <label className="form-label">Category</label>
-        <select name="category" value={data.category} onChange={onChange} className="form-input">
+        <label className="form-label">Cultivator Category</label>
+        <select
+          name="category"
+          value={data.category}
+          onChange={onChange}
+          className="form-input bg-paper"
+        >
           {CATEGORY_OPTIONS.map((c) => <option key={c} value={c}>{c}</option>)}
         </select>
       </div>
@@ -106,36 +125,58 @@ function PersonalStep({ data, onChange, errors }) {
   )
 }
 
-function OTPStep({ data, onChange, errors, otpSent, onSendOtp, otpLoading }) {
+function OtpStep({ data, onChange, onSendOtp, otpSent, errors }) {
   return (
-    <div className="space-y-4">
-      <h3 className="font-semibold text-gray-800 text-lg">Mobile OTP Verification</h3>
-      <p className="text-sm text-gray-500">
-        Your mobile number must be linked to your Aadhaar for PM-KISAN benefits.
-      </p>
+    <div className="space-y-5 text-left">
+      <div className="border-b border-paper-line pb-3">
+        <h3 className="font-serif text-xl font-bold text-ink">02. Mobile Telephony &amp; OTP Verification</h3>
+        <p className="font-mono text-xs text-ink-faint mt-1">
+          Verification prevents bulk proxy applications and confirms active contact ownership.
+        </p>
+      </div>
+
       <div>
-        <label className="form-label">Aadhaar-Linked Mobile Number *</label>
+        <label className="form-label">10-Digit Mobile Number *</label>
         <div className="flex gap-2">
-          <input type="tel" name="mobile_number" value={data.mobile_number} onChange={onChange}
-            className={`form-input flex-1 ${errors.mobile_number ? 'border-red-400' : ''}`}
-            placeholder="10-digit mobile number" pattern="\d{10}" required />
-          <button type="button" onClick={onSendOtp} disabled={otpLoading || otpSent}
-            className="btn-secondary flex-shrink-0 text-sm px-4">
-            {otpSent ? '✓ Sent' : otpLoading ? '…' : 'Send OTP'}
+          <input
+            type="tel"
+            name="mobile_number"
+            value={data.mobile_number}
+            onChange={onChange}
+            maxLength={10}
+            className={`form-input ${errors.mobile_number ? 'border-accent' : ''}`}
+            placeholder="9876543210"
+            required
+          />
+          <button
+            type="button"
+            onClick={onSendOtp}
+            className="btn-secondary whitespace-nowrap text-xs"
+          >
+            {otpSent ? 'Resend OTP ↻' : 'Transmit OTP →'}
           </button>
         </div>
-        {errors.mobile_number && <p className="text-red-500 text-xs mt-1">{errors.mobile_number}</p>}
+        {errors.mobile_number && <p className="text-accent font-mono text-xs mt-1">[ERROR] {errors.mobile_number}</p>}
       </div>
+
       {otpSent && (
-        <div>
-          <label className="form-label">Enter OTP *</label>
-          <input type="text" name="otp" value={data.otp} onChange={onChange}
-            className={`form-input ${errors.otp ? 'border-red-400' : ''}`}
-            placeholder="Enter 6-digit OTP" maxLength={6} required />
-          {errors.otp && <p className="text-red-500 text-xs mt-1">{errors.otp}</p>}
-          <p className="text-xs text-amber-600 mt-1">
-            🔐 <strong>Demo OTP:</strong> Use <code className="bg-amber-50 px-1 rounded">123456</code>
-          </p>
+        <div className="border border-paper-line p-4 bg-paper-subtle space-y-3 font-mono text-xs">
+          <div className="text-ink-muted">
+            [TRANSMITTED]: Verification code dispatched via SMS. (Demo Mock OTP: <strong>123456</strong>)
+          </div>
+          <div>
+            <label className="form-label">Enter 6-Digit One-Time Password *</label>
+            <input
+              type="text"
+              name="otp"
+              value={data.otp}
+              onChange={onChange}
+              maxLength={6}
+              className={`form-input font-mono tracking-widest text-base ${errors.otp ? 'border-accent' : ''}`}
+              placeholder="123456"
+            />
+            {errors.otp && <p className="text-accent font-mono text-xs mt-1">[ERROR] {errors.otp}</p>}
+          </div>
         </div>
       )}
     </div>
@@ -144,31 +185,43 @@ function OTPStep({ data, onChange, errors, otpSent, onSendOtp, otpLoading }) {
 
 function IdentityStep({ data, onChange, errors }) {
   return (
-    <div className="space-y-4">
-      <h3 className="font-semibold text-gray-800 text-lg">Aadhaar Identity Verification</h3>
-      <p className="text-sm text-gray-500">
-        Your Aadhaar number will be verified through e-KYC. The raw number is never stored.
-      </p>
-      <div>
-        <label className="form-label">Aadhaar Number (12 digits) *</label>
-        <input type="text" name="aadhaar_number" value={data.aadhaar_number} onChange={onChange}
-          className={`form-input ${errors.aadhaar_number ? 'border-red-400' : ''}`}
-          placeholder="XXXX-XXXX-XXXX" maxLength={12} pattern="\d{12}" required />
-        {errors.aadhaar_number && <p className="text-red-500 text-xs mt-1">{errors.aadhaar_number}</p>}
-        <p className="text-xs text-gray-400 mt-1">Enter 12 digits without spaces or dashes.</p>
+    <div className="space-y-5 text-left">
+      <div className="border-b border-paper-line pb-3">
+        <h3 className="font-serif text-xl font-bold text-ink">03. UIDAI Identity &amp; e-KYC Verification</h3>
+        <p className="font-mono text-xs text-ink-faint mt-1">
+          Zero-leak privacy: 12-digit Aadhaar is hashed immediately via Salted SHA-256. Raw numbers are never stored.
+        </p>
       </div>
-      <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
-        <label className="flex items-start gap-3 cursor-pointer">
-          <input type="checkbox" name="e_kyc_consent" checked={data.e_kyc_consent}
-            onChange={(e) => onChange({ target: { name: 'e_kyc_consent', value: e.target.checked } })}
-            className="mt-1 w-4 h-4 accent-gov-blue" required />
-          <span className="text-sm text-blue-900">
-            I hereby give my <strong>consent for Aadhaar-based e-KYC verification</strong> for the PM-KISAN
-            scheme. I understand my Aadhaar data will be used only for identity verification and scheme
-            eligibility assessment as per the Aadhaar Act 2016.
+
+      <div>
+        <label className="form-label">12-Digit Aadhaar Identifier *</label>
+        <input
+          type="text"
+          name="aadhaar_number"
+          value={data.aadhaar_number}
+          onChange={onChange}
+          maxLength={12}
+          className={`form-input font-mono tracking-widest ${errors.aadhaar_number ? 'border-accent' : ''}`}
+          placeholder="100000000001"
+          required
+        />
+        {errors.aadhaar_number && <p className="text-accent font-mono text-xs mt-1">[ERROR] {errors.aadhaar_number}</p>}
+      </div>
+
+      <div className="border border-paper-line p-4 bg-paper-subtle space-y-3">
+        <label className="flex items-start gap-3 cursor-pointer text-xs leading-relaxed text-ink-muted font-mono">
+          <input
+            type="checkbox"
+            name="e_kyc_consent"
+            checked={data.e_kyc_consent}
+            onChange={onChange}
+            className="mt-0.5 rounded-none border-paper-strong text-ink focus:ring-0"
+          />
+          <span>
+            <strong>e-KYC Consent:</strong> I hereby grant consent to the PM-KISAN authority to authenticate my demographic particulars against the UIDAI centralized identity repository for subsidy disbursement eligibility.
           </span>
         </label>
-        {errors.e_kyc_consent && <p className="text-red-500 text-xs mt-2">{errors.e_kyc_consent}</p>}
+        {errors.e_kyc_consent && <p className="text-accent font-mono text-xs">[ERROR] {errors.e_kyc_consent}</p>}
       </div>
     </div>
   )
@@ -176,29 +229,41 @@ function IdentityStep({ data, onChange, errors }) {
 
 function BankStep({ data, onChange, errors }) {
   return (
-    <div className="space-y-4">
-      <h3 className="font-semibold text-gray-800 text-lg">Bank Account Details</h3>
-      <p className="text-sm text-gray-500">
-        PM-KISAN installments are credited directly to your bank account via Direct Benefit Transfer (DBT).
-      </p>
-      <div>
-        <label className="form-label">Bank Account Number *</label>
-        <input type="text" name="bank_account_number" value={data.bank_account_number} onChange={onChange}
-          className={`form-input ${errors.bank_account_number ? 'border-red-400' : ''}`}
-          placeholder="9 to 18 digit account number" required />
-        {errors.bank_account_number && <p className="text-red-500 text-xs mt-1">{errors.bank_account_number}</p>}
+    <div className="space-y-5 text-left">
+      <div className="border-b border-paper-line pb-3">
+        <h3 className="font-serif text-xl font-bold text-ink">04. Direct Benefit Transfer (DBT) Bank Account</h3>
+        <p className="font-mono text-xs text-ink-faint mt-1">
+          Account is verified via PFMS registry and simulated penny-drop reconciliation.
+        </p>
       </div>
+
       <div>
-        <label className="form-label">IFSC Code *</label>
-        <input type="text" name="ifsc_code" value={data.ifsc_code} onChange={onChange}
-          className={`form-input uppercase ${errors.ifsc_code ? 'border-red-400' : ''}`}
-          placeholder="e.g., SBIN0001234" pattern="[A-Za-z]{4}0[A-Za-z0-9]{6}" maxLength={11} required />
-        {errors.ifsc_code && <p className="text-red-500 text-xs mt-1">{errors.ifsc_code}</p>}
-        <p className="text-xs text-gray-400 mt-1">11-character code (e.g., SBIN0001234)</p>
+        <label className="form-label">Commercial / Rural Bank Account Number (9–18 Digits) *</label>
+        <input
+          type="text"
+          name="bank_account_number"
+          value={data.bank_account_number}
+          onChange={onChange}
+          className={`form-input font-mono ${errors.bank_account_number ? 'border-accent' : ''}`}
+          placeholder="123456789001"
+          required
+        />
+        {errors.bank_account_number && <p className="text-accent font-mono text-xs mt-1">[ERROR] {errors.bank_account_number}</p>}
       </div>
-      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-xs text-yellow-800">
-        ⚠️ Ensure your bank account is active and the account holder name matches your Aadhaar name.
-        Mismatches may result in rejection.
+
+      <div>
+        <label className="form-label">Bank Branch IFSC Code (11 Alphanumeric Characters) *</label>
+        <input
+          type="text"
+          name="ifsc_code"
+          value={data.ifsc_code}
+          onChange={onChange}
+          maxLength={11}
+          className={`form-input font-mono uppercase ${errors.ifsc_code ? 'border-accent' : ''}`}
+          placeholder="SBIN0001234"
+          required
+        />
+        {errors.ifsc_code && <p className="text-accent font-mono text-xs mt-1">[ERROR] {errors.ifsc_code}</p>}
       </div>
     </div>
   )
@@ -206,268 +271,360 @@ function BankStep({ data, onChange, errors }) {
 
 function LandStep({ data, onChange, errors }) {
   return (
-    <div className="space-y-4">
-      <h3 className="font-semibold text-gray-800 text-lg">Land Parcel Details</h3>
-      <p className="text-sm text-gray-500">
-        Provide your land record details as per official revenue records (Khasra/Khatauni).
-      </p>
-      <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-5 text-left">
+      <div className="border-b border-paper-line pb-3">
+        <h3 className="font-serif text-xl font-bold text-ink">05. Land Parcel &amp; Revenue Record Particulars</h3>
+        <p className="font-mono text-xs text-ink-faint mt-1">
+          Must precisely match the State Bhulekh Digital Registry record.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div>
           <label className="form-label">State Code *</label>
-          <input type="text" name="state_code" value={data.state_code} onChange={onChange}
-            className={`form-input uppercase ${errors.state_code ? 'border-red-400' : ''}`}
-            placeholder="e.g., UP" maxLength={4} required />
-          {errors.state_code && <p className="text-red-500 text-xs mt-1">{errors.state_code}</p>}
+          <input
+            type="text"
+            name="state_code"
+            value={data.state_code}
+            onChange={onChange}
+            maxLength={3}
+            className={`form-input font-mono uppercase ${errors.state_code ? 'border-accent' : ''}`}
+            placeholder="UP"
+            required
+          />
         </div>
         <div>
           <label className="form-label">District Code *</label>
-          <input type="text" name="district_code" value={data.district_code} onChange={onChange}
-            className={`form-input uppercase ${errors.district_code ? 'border-red-400' : ''}`}
-            placeholder="e.g., AGR" maxLength={6} required />
-          {errors.district_code && <p className="text-red-500 text-xs mt-1">{errors.district_code}</p>}
+          <input
+            type="text"
+            name="district_code"
+            value={data.district_code}
+            onChange={onChange}
+            maxLength={4}
+            className={`form-input font-mono uppercase ${errors.district_code ? 'border-accent' : ''}`}
+            placeholder="MRT"
+            required
+          />
         </div>
         <div>
           <label className="form-label">Tehsil Code *</label>
-          <input type="text" name="tehsil_code" value={data.tehsil_code} onChange={onChange}
-            className={`form-input ${errors.tehsil_code ? 'border-red-400' : ''}`}
-            placeholder="e.g., T001" required />
-          {errors.tehsil_code && <p className="text-red-500 text-xs mt-1">{errors.tehsil_code}</p>}
+          <input
+            type="text"
+            name="tehsil_code"
+            value={data.tehsil_code}
+            onChange={onChange}
+            className={`form-input font-mono uppercase ${errors.tehsil_code ? 'border-accent' : ''}`}
+            placeholder="HAP"
+            required
+          />
         </div>
         <div>
           <label className="form-label">Village Code *</label>
-          <input type="text" name="village_code" value={data.village_code} onChange={onChange}
-            className={`form-input ${errors.village_code ? 'border-red-400' : ''}`}
-            placeholder="e.g., V001" required />
-          {errors.village_code && <p className="text-red-500 text-xs mt-1">{errors.village_code}</p>}
-        </div>
-        <div>
-          <label className="form-label">Khata Number *</label>
-          <input type="text" name="khata_number" value={data.khata_number} onChange={onChange}
-            className={`form-input ${errors.khata_number ? 'border-red-400' : ''}`}
-            placeholder="e.g., K001" required />
-          {errors.khata_number && <p className="text-red-500 text-xs mt-1">{errors.khata_number}</p>}
-        </div>
-        <div>
-          <label className="form-label">Plot / Khasra Number *</label>
-          <input type="text" name="plot_number" value={data.plot_number} onChange={onChange}
-            className={`form-input ${errors.plot_number ? 'border-red-400' : ''}`}
-            placeholder="e.g., P001" required />
-          {errors.plot_number && <p className="text-red-500 text-xs mt-1">{errors.plot_number}</p>}
+          <input
+            type="text"
+            name="village_code"
+            value={data.village_code}
+            onChange={onChange}
+            className={`form-input font-mono uppercase ${errors.village_code ? 'border-accent' : ''}`}
+            placeholder="VIL001"
+            required
+          />
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-4">
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-          <label className="form-label">Land Area (hectares) *</label>
-          <input type="number" name="declared_land_area_ha" value={data.declared_land_area_ha}
-            onChange={onChange} className={`form-input ${errors.declared_land_area_ha ? 'border-red-400' : ''}`}
-            placeholder="e.g., 1.25" step="0.01" min="0.01" max="100" required />
-          {errors.declared_land_area_ha && <p className="text-red-500 text-xs mt-1">{errors.declared_land_area_ha}</p>}
+          <label className="form-label">Khata / Revenue Account Number *</label>
+          <input
+            type="text"
+            name="khata_number"
+            value={data.khata_number}
+            onChange={onChange}
+            className={`form-input font-mono ${errors.khata_number ? 'border-accent' : ''}`}
+            placeholder="K001"
+            required
+          />
+        </div>
+        <div>
+          <label className="form-label">Plot / Khasra Survey Number *</label>
+          <input
+            type="text"
+            name="plot_number"
+            value={data.plot_number}
+            onChange={onChange}
+            className={`form-input font-mono ${errors.plot_number ? 'border-accent' : ''}`}
+            placeholder="P001"
+            required
+          />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label className="form-label">Cultivable Area (Hectares) *</label>
+          <input
+            type="number"
+            name="declared_land_area_ha"
+            value={data.declared_land_area_ha}
+            onChange={onChange}
+            step="0.01"
+            min="0.01"
+            className={`form-input font-mono ${errors.declared_land_area_ha ? 'border-accent' : ''}`}
+            placeholder="1.25"
+            required
+          />
         </div>
         <div>
           <label className="form-label">Ownership Type *</label>
-          <select name="ownership_type" value={data.ownership_type} onChange={onChange} className="form-input" required>
+          <select
+            name="ownership_type"
+            value={data.ownership_type}
+            onChange={onChange}
+            className="form-input bg-paper"
+          >
             {OWNERSHIP_TYPES.map((o) => <option key={o} value={o}>{o}</option>)}
           </select>
         </div>
-      </div>
-      <div>
-        <label className="form-label">Primary Crop (Optional)</label>
-        <select name="declared_crop_code" value={data.declared_crop_code} onChange={onChange} className="form-input">
-          <option value="">— Select crop (optional) —</option>
-          {CROP_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
+        <div>
+          <label className="form-label">Crop Code (Optional)</label>
+          <select
+            name="declared_crop_code"
+            value={data.declared_crop_code}
+            onChange={onChange}
+            className="form-input bg-paper"
+          >
+            <option value="">Select Crop</option>
+            {CROP_CODES.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
       </div>
     </div>
   )
 }
 
 function DocumentStep({ file, onFileChange, errors }) {
-  const fileRef = useRef()
-  const [dragOver, setDragOver] = useState(false)
-
-  const handleDrop = (e) => {
-    e.preventDefault()
-    setDragOver(false)
-    const dropped = e.dataTransfer.files[0]
-    if (dropped) onFileChange(dropped)
-  }
+  const inputRef = useRef(null)
 
   return (
-    <div className="space-y-4">
-      <h3 className="font-semibold text-gray-800 text-lg">Upload Land Document</h3>
-      <p className="text-sm text-gray-500">
-        Upload a scanned copy of your land ownership document (Khasra/Khatauni extract or Land Deed).
-      </p>
+    <div className="space-y-5 text-left">
+      <div className="border-b border-paper-line pb-3">
+        <h3 className="font-serif text-xl font-bold text-ink">06. Land Ownership Evidence (Deed / Khasra)</h3>
+        <p className="font-mono text-xs text-ink-faint mt-1">
+          Upload certified revenue extract (Khasra/Khatauni or Registered Sale Deed). Allowed: PDF, JPG, PNG (Max 5MB).
+        </p>
+      </div>
 
       <div
-        onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
-        onDragLeave={() => setDragOver(false)}
-        onDrop={handleDrop}
-        onClick={() => fileRef.current?.click()}
-        className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
-          dragOver ? 'border-gov-blue bg-blue-50' : file ? 'border-gov-green bg-green-50' : 'border-gray-300 hover:border-gov-blue hover:bg-blue-50'
+        onClick={() => inputRef.current?.click()}
+        className={`border-2 border-dashed p-8 text-center cursor-pointer transition-colors ${
+          file ? 'border-gov bg-gov-subtle/50' : 'border-paper-strong hover:border-ink bg-paper'
         }`}
       >
         <input
-          ref={fileRef}
+          ref={inputRef}
           type="file"
           accept=".pdf,.jpg,.jpeg,.png"
+          onChange={(e) => onFileChange(e.target.files[0] || null)}
           className="hidden"
-          onChange={(e) => onFileChange(e.target.files[0])}
         />
         {file ? (
-          <div className="flex flex-col items-center gap-2">
-            <FileText className="w-10 h-10 text-gov-green" />
-            <p className="font-medium text-gov-green">{file.name}</p>
-            <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); onFileChange(null) }}
-              className="flex items-center gap-1 text-red-500 hover:text-red-700 text-sm mt-1"
-            >
-              <X className="w-3.5 h-3.5" /> Remove
-            </button>
+          <div className="font-mono text-xs space-y-1">
+            <span className="font-bold text-gov block">[ATTACHED FILE SELECTED]</span>
+            <span className="text-ink-muted">{file.name} ({(file.size / 1024).toFixed(1)} KB)</span>
+            <span className="text-ink-faint block underline mt-2">Click to replace file</span>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2">
-            <UploadCloud className="w-10 h-10 text-gray-400" />
-            <p className="font-medium text-gray-600">Drag &amp; drop or click to upload</p>
-            <p className="text-xs text-gray-400">PDF, JPG, PNG — Max 5MB</p>
+          <div className="font-mono text-xs space-y-2">
+            <span className="font-bold text-ink block">[SELECT REVENUE PROOF DOCUMENT]</span>
+            <span className="text-ink-faint block">Click here to browse files on your device (PDF, JPG, PNG under 5MB)</span>
           </div>
         )}
       </div>
-      {errors.document && <p className="text-red-500 text-xs">{errors.document}</p>}
+      {errors.document && <p className="text-accent font-mono text-xs">[ERROR] {errors.document}</p>}
     </div>
   )
 }
 
-function DeclarationStep({ data, onChange, errors }) {
+function DeclarationStep({ data, onChange, form, file, errors }) {
   return (
-    <div className="space-y-5">
-      <h3 className="font-semibold text-gray-800 text-lg">Farmer Self-Declaration</h3>
-      <p className="text-sm text-gray-500">
-        Please read the following declarations carefully before submitting your application.
-      </p>
+    <div className="space-y-5 text-left">
+      <div className="border-b border-paper-line pb-3">
+        <h3 className="font-serif text-xl font-bold text-ink">07. Summary Review &amp; Statutory Affirmation</h3>
+        <p className="font-mono text-xs text-ink-faint mt-1">
+          Verify application summary prior to lodging claim into the anomaly audit queue.
+        </p>
+      </div>
 
-      <div className="bg-orange-50 border border-orange-200 rounded-xl p-5 space-y-4">
-        <h4 className="font-semibold text-orange-900">Eligibility Declaration</h4>
-        <ul className="text-sm text-orange-800 space-y-2 list-disc list-inside">
-          <li>I am a genuine farmer and the land mentioned is cultivable agricultural land.</li>
-          <li>I or any family member is not an income tax payee.</li>
-          <li>I or any family member is not a current or former government employee drawing pension.</li>
-          <li>I am not a registered doctor, engineer, lawyer, CA, or architect.</li>
-          <li>The bank account provided is active and in my name.</li>
-          <li>All information provided is true to the best of my knowledge.</li>
-        </ul>
+      {/* Review Ledger */}
+      <div className="border border-paper-line p-4 bg-paper-subtle space-y-2 font-mono text-xs">
+        <div className="flex justify-between border-b border-paper-line pb-1">
+          <span className="text-ink-faint">Applicant:</span>
+          <span className="font-bold text-ink">{form.farmer_name}</span>
+        </div>
+        <div className="flex justify-between border-b border-paper-line pb-1">
+          <span className="text-ink-faint">Aadhaar (Masked):</span>
+          <span className="text-ink">XXXX-XXXX-{form.aadhaar_number?.slice(-4) || '****'}</span>
+        </div>
+        <div className="flex justify-between border-b border-paper-line pb-1">
+          <span className="text-ink-faint">Bank Account &amp; IFSC:</span>
+          <span className="text-ink">{form.bank_account_number} ({form.ifsc_code})</span>
+        </div>
+        <div className="flex justify-between border-b border-paper-line pb-1">
+          <span className="text-ink-faint">Declared Parcel:</span>
+          <span className="text-ink">{form.state_code}-{form.district_code}-{form.tehsil_code}-{form.village_code}-{form.khata_number}-{form.plot_number}</span>
+        </div>
+        <div className="flex justify-between border-b border-paper-line pb-1">
+          <span className="text-ink-faint">Land Area:</span>
+          <span className="text-ink">{form.declared_land_area_ha} Hectares ({form.ownership_type})</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-ink-faint">Attached Document:</span>
+          <span className="text-ink">{file?.name || 'Attached file on record'}</span>
+        </div>
+      </div>
 
-        <label className="flex items-start gap-3 cursor-pointer mt-3">
-          <input type="checkbox" name="self_declaration" checked={data.self_declaration}
-            onChange={(e) => onChange({ target: { name: 'self_declaration', value: e.target.checked } })}
-            className="mt-1 w-4 h-4 accent-gov-blue" required />
-          <span className="text-sm text-orange-900 font-medium">
-            I hereby declare that all the information provided is true and correct. I understand that
-            any false information may result in rejection of my application and legal action.
+      {/* Statutory Affirmation */}
+      <div className="border border-paper-strong p-4 bg-paper space-y-2">
+        <label className="flex items-start gap-3 cursor-pointer text-xs font-mono text-ink leading-relaxed">
+          <input
+            type="checkbox"
+            name="self_declaration"
+            checked={data.self_declaration}
+            onChange={onChange}
+            className="mt-0.5 rounded-none border-paper-strong text-ink focus:ring-0"
+          />
+          <span>
+            <strong>STATUTORY LEGAL AFFIRMATION:</strong> I hereby declare that I am a bona fide landholder cultivator. Neither I nor any member of my family is an income tax payee, government servant, or institutional entity excluded under Section 3 of PM-KISAN Operational Rules. Any false declaration will result in benefit recovery and penal prosecution under the Indian Penal Code.
           </span>
         </label>
-        {errors.self_declaration && <p className="text-red-500 text-xs">{errors.self_declaration}</p>}
+        {errors.self_declaration && <p className="text-accent font-mono text-xs">[ERROR] {errors.self_declaration}</p>}
       </div>
     </div>
   )
 }
 
-// ── Main Form Component ───────────────────────────────────────────────────────
-const INITIAL_FORM = {
-  farmer_name: '',
-  date_of_birth: '',
-  gender: 'Male',
-  category: 'General',
-  mobile_number: '',
-  otp: '',
-  aadhaar_number: '',
-  e_kyc_consent: false,
-  bank_account_number: '',
-  ifsc_code: '',
-  state_code: '',
-  district_code: '',
-  tehsil_code: '',
-  village_code: '',
-  khata_number: '',
-  plot_number: '',
-  declared_land_area_ha: '',
-  ownership_type: 'Single',
-  declared_crop_code: '',
-  self_declaration: false,
-}
+// ── Main Form Page Component ──────────────────────────────────────────────────
 
 export default function ApplicationFormPage() {
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
-  const [form, setForm] = useState(INITIAL_FORM)
   const [file, setFile] = useState(null)
-  const [errors, setErrors] = useState({})
   const [otpSent, setOtpSent] = useState(false)
-  const [otpLoading, setOtpLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [submitted, setSubmitted] = useState(null)
   const [submitError, setSubmitError] = useState('')
+  const [submitted, setSubmitted] = useState(null)
+  const [errors, setErrors] = useState({})
+
+  const [form, setForm] = useState({
+    farmer_name: '',
+    date_of_birth: '',
+    gender: 'Male',
+    category: 'General',
+    mobile_number: '',
+    otp: '',
+    aadhaar_number: '',
+    e_kyc_consent: false,
+    bank_account_number: '',
+    ifsc_code: '',
+    state_code: 'UP',
+    district_code: 'MRT',
+    tehsil_code: 'HAP',
+    village_code: 'VIL001',
+    khata_number: 'K001',
+    plot_number: 'P001',
+    declared_land_area_ha: '1.25',
+    ownership_type: 'Single',
+    declared_crop_code: 'WHEAT',
+    self_declaration: false,
+  })
 
   const handleChange = (e) => {
-    const { name, value } = e.target
-    setForm((prev) => ({ ...prev, [name]: value }))
-    setErrors((prev) => ({ ...prev, [name]: '' }))
+    const { name, value, type, checked } = e.target
+    setForm((prev) => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }))
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }))
+    }
+  }
+
+  // Quick Demo Autofill helper
+  const handleAutofillValid = () => {
+    setForm({
+      farmer_name: 'Ramesh Kumar',
+      date_of_birth: '1982-06-15',
+      gender: 'Male',
+      category: 'General',
+      mobile_number: '9876543210',
+      otp: '123456',
+      aadhaar_number: '100000000001',
+      e_kyc_consent: true,
+      bank_account_number: '123456789001',
+      ifsc_code: 'SBIN0001234',
+      state_code: 'UP',
+      district_code: 'MRT',
+      tehsil_code: 'HAP',
+      village_code: 'VIL001',
+      khata_number: 'K001',
+      plot_number: 'P001',
+      declared_land_area_ha: '1.25',
+      ownership_type: 'Single',
+      declared_crop_code: 'WHEAT',
+      self_declaration: true,
+    })
+    setOtpSent(true)
+    // Create a mock dummy PDF file for upload
+    const blob = new Blob(['Mock PM-KISAN Land Deed Certificate Content'], { type: 'application/pdf' })
+    const dummyFile = new File([blob], 'ramesh_land_deed_k001.pdf', { type: 'application/pdf' })
+    setFile(dummyFile)
+    setErrors({})
   }
 
   const handleSendOtp = () => {
     if (!/^\d{10}$/.test(form.mobile_number)) {
-      setErrors((p) => ({ ...p, mobile_number: 'Enter a valid 10-digit mobile number.' }))
+      setErrors((prev) => ({ ...prev, mobile_number: 'Enter a valid 10-digit mobile number.' }))
       return
     }
-    setOtpLoading(true)
-    setTimeout(() => { setOtpLoading(false); setOtpSent(true) }, 1000)
+    setOtpSent(true)
+    setForm((prev) => ({ ...prev, otp: '123456' }))
   }
 
-  // Per-step validation
   const validateStep = () => {
     const errs = {}
     switch (step) {
-      case 0: // Personal
-        if (!form.farmer_name.trim()) errs.farmer_name = 'Full name is required.'
+      case 0:
+        if (!form.farmer_name.trim()) errs.farmer_name = 'Name is required.'
         if (!form.date_of_birth) errs.date_of_birth = 'Date of birth is required.'
         break
-      case 1: // OTP
-        if (!/^\d{10}$/.test(form.mobile_number)) errs.mobile_number = 'Enter a valid 10-digit mobile number.'
-        if (!form.otp) errs.otp = 'Please enter the OTP.'
-        else if (form.otp !== '123456') errs.otp = 'Invalid OTP. (Demo: use 123456)'
+      case 1:
+        if (!/^\d{10}$/.test(form.mobile_number)) errs.mobile_number = '10-digit mobile number required.'
+        if (form.otp !== '123456') errs.otp = 'Invalid OTP. Enter mock OTP: 123456.'
         break
-      case 2: // Identity
-        if (!/^\d{12}$/.test(form.aadhaar_number)) errs.aadhaar_number = 'Aadhaar must be exactly 12 digits.'
-        if (!form.e_kyc_consent) errs.e_kyc_consent = 'e-KYC consent is required.'
+      case 2:
+        if (!/^\d{12}$/.test(form.aadhaar_number)) errs.aadhaar_number = 'Aadhaar must be exactly 12 numeric digits.'
+        if (!form.e_kyc_consent) errs.e_kyc_consent = 'Consent for UIDAI e-KYC is mandatory.'
         break
-      case 3: // Bank
-        if (!form.bank_account_number || form.bank_account_number.length < 9)
-          errs.bank_account_number = 'Account number must be 9-18 digits.'
-        if (!/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/.test(form.ifsc_code))
-          errs.ifsc_code = 'Enter a valid IFSC code (e.g., SBIN0001234).'
+      case 3:
+        if (!form.bank_account_number || form.bank_account_number.length < 9) errs.bank_account_number = 'Bank account must be at least 9 digits.'
+        if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.ifsc_code.toUpperCase())) errs.ifsc_code = 'Invalid IFSC format (e.g. SBIN0001234).'
         break
-      case 4: // Land
-        if (!form.state_code.trim()) errs.state_code = 'State code is required.'
-        if (!form.district_code.trim()) errs.district_code = 'District code is required.'
-        if (!form.tehsil_code.trim()) errs.tehsil_code = 'Tehsil code is required.'
-        if (!form.village_code.trim()) errs.village_code = 'Village code is required.'
-        if (!form.khata_number.trim()) errs.khata_number = 'Khata number is required.'
-        if (!form.plot_number.trim()) errs.plot_number = 'Plot / Khasra number is required.'
-        if (!form.declared_land_area_ha || Number(form.declared_land_area_ha) <= 0)
-          errs.declared_land_area_ha = 'Land area must be greater than 0.'
+      case 4:
+        if (!form.state_code) errs.state_code = 'State code is required.'
+        if (!form.district_code) errs.district_code = 'District code is required.'
+        if (!form.tehsil_code) errs.tehsil_code = 'Tehsil code is required.'
+        if (!form.village_code) errs.village_code = 'Village code is required.'
+        if (!form.khata_number) errs.khata_number = 'Khata number is required.'
+        if (!form.plot_number) errs.plot_number = 'Plot number is required.'
+        if (!form.declared_land_area_ha || parseFloat(form.declared_land_area_ha) <= 0) errs.declared_land_area_ha = 'Land area must be > 0.'
         break
-      case 5: // Document
-        if (!file) errs.document = 'Please upload your land document.'
-        else {
-          if (!ALLOWED_MIME.includes(file.type)) errs.document = 'Only PDF, JPG, PNG files are allowed.'
-          else if (file.size > MAX_FILE_MB * 1024 * 1024) errs.document = `File must be under ${MAX_FILE_MB}MB.`
-        }
+      case 5:
+        if (!file) errs.document = 'Please upload a land ownership proof file.'
+        else if (!ALLOWED_MIME.includes(file.type)) errs.document = 'Only PDF, JPG, PNG formats permitted.'
+        else if (file.size > MAX_FILE_MB * 1024 * 1024) errs.document = `File size must not exceed ${MAX_FILE_MB}MB.`
         break
-      case 6: // Declaration
-        if (!form.self_declaration) errs.self_declaration = 'You must accept the declaration to proceed.'
+      case 6:
+        if (!form.self_declaration) errs.self_declaration = 'You must affirm the legal declaration to submit.'
         break
       default:
         break
@@ -530,51 +687,65 @@ export default function ApplicationFormPage() {
     }
   }
 
-  // ── Submission success screen ─────────────────────────────────────────────
+  // ── Submission Success Screen (Editorial Gazette Receipt) ──────────────────
   if (submitted) {
     return (
-      <div className="max-w-2xl mx-auto">
-        <div className="card text-center py-12">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-green-100 rounded-full mb-6">
-            <CheckCircle className="w-12 h-12 text-gov-green" />
-          </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Application Submitted!</h2>
-          <p className="text-gov-green font-semibold mb-6">Your PM-KISAN application has been received.</p>
-
-          <div className="bg-gray-50 rounded-xl p-5 text-left space-y-3 mb-6 text-sm">
-            <div className="flex justify-between">
-              <span className="text-gray-500">Application ID</span>
-              <span className="font-mono font-semibold">APP-{String(submitted.application_id).padStart(6, '0')}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Scheme</span>
-              <span className="font-semibold">{submitted.scheme_code}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Status</span>
-              <span className="font-semibold text-blue-600">{submitted.status}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Parcel ID</span>
-              <span className="font-mono text-xs">{submitted.parcel_id}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-gray-500">Aadhaar (Masked)</span>
-              <span className="font-mono">{submitted.aadhaar_masked}</span>
-            </div>
+      <div className="max-w-2xl mx-auto text-left font-sans">
+        <div className="border border-paper-line p-8 bg-paper space-y-6">
+          <div className="border-b border-paper-line pb-4">
+            <span className="font-mono text-xs uppercase tracking-widest text-gov font-semibold block mb-1">
+              [ OFFICIAL RECEIPT DOCKET // CLAIM LODGED ]
+            </span>
+            <h2 className="font-serif text-3xl font-bold text-ink">
+              Application Receipt Generated
+            </h2>
+            <p className="font-mono text-xs text-ink-faint mt-1">
+              Application is queued for automated registry cross-verification and officer adjudication.
+            </p>
           </div>
 
-          <div className="bg-blue-50 rounded-xl p-4 text-sm text-blue-800 mb-6 text-left">
-            <strong>Next Steps:</strong> {submitted.citizen_status_message}
+          <div className="border border-paper-line p-5 bg-paper-subtle space-y-3 font-mono text-xs">
+            <div className="flex justify-between border-b border-paper-line pb-1.5">
+              <span className="text-ink-faint">APPLICATION ID:</span>
+              <span className="font-bold text-ink text-sm">APP-{String(submitted.application_id).padStart(6, '0')}</span>
+            </div>
+            <div className="flex justify-between border-b border-paper-line pb-1.5">
+              <span className="text-ink-faint">SCHEME CODE:</span>
+              <span className="font-semibold text-ink">{submitted.scheme_code}</span>
+            </div>
+            <div className="flex justify-between border-b border-paper-line pb-1.5">
+              <span className="text-ink-faint">INITIAL STATUS:</span>
+              <span className="font-bold text-gov bg-gov-subtle px-2 py-0.5 border border-gov">
+                {submitted.status}
+              </span>
+            </div>
+            <div className="flex justify-between border-b border-paper-line pb-1.5">
+              <span className="text-ink-faint">PARCEL REFERENCE:</span>
+              <span className="text-ink">{submitted.parcel_id || '—'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-ink-faint">AADHAAR TOKEN PREVIEW:</span>
+              <span className="text-ink">{submitted.aadhaar_masked || 'XXXX-XXXX-****'}</span>
+            </div>
           </div>
 
-          <div className="flex gap-3 justify-center">
-            <button onClick={() => navigate('/dashboard')} className="btn-primary">
-              Go to Dashboard
-            </button>
-            <button onClick={() => navigate(`/applications/${submitted.application_id}`)} className="btn-secondary">
-              View Application
-            </button>
+          <div className="border-l-2 border-paper-strong pl-4 py-2 text-xs text-ink-muted font-mono bg-paper-subtle/50">
+            {submitted.citizen_status_message}
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-paper-line">
+            <Link
+              to={`/applications/${submitted.application_id}`}
+              className="btn-primary w-full sm:w-auto"
+            >
+              Inspect Application Record →
+            </Link>
+            <Link
+              to="/dashboard"
+              className="btn-secondary w-full sm:w-auto"
+            >
+              Return to Citizen Ledger
+            </Link>
           </div>
         </div>
       </div>
@@ -582,63 +753,95 @@ export default function ApplicationFormPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">PM-KISAN Application</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Step {step + 1} of {STEPS.length} — {STEPS[step].label}
-        </p>
+    <div className="max-w-3xl mx-auto text-left font-sans">
+      {/* Top Header & Demo Fill */}
+      <div className="border-b border-paper-line pb-4 mb-6 flex flex-col sm:flex-row sm:items-baseline justify-between gap-3">
+        <div>
+          <span className="font-mono text-xs uppercase tracking-widest text-accent font-semibold block mb-0.5">
+            [ FORM A-1 // SUBSIDY ENROLMENT ]
+          </span>
+          <h1 className="font-serif text-3xl font-bold tracking-tight text-ink">
+            PM-KISAN Scheme Application
+          </h1>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleAutofillValid}
+          className="border border-paper-line hover:border-paper-strong px-3 py-1.5 font-mono text-xs uppercase tracking-wider text-ink-muted bg-paper hover:bg-paper-subtle transition-colors self-start sm:self-auto"
+        >
+          Auto-fill Valid Demo Claim ⚡
+        </button>
       </div>
 
-      <StepBar currentStep={step} />
+      {/* Step Progress Ledger */}
+      <StepBar currentStep={step} onSelectStep={setStep} />
 
-      <div className="card">
-        {/* Step content */}
+      {/* Main Step Box */}
+      <div className="border border-paper-line p-6 sm:p-8 bg-paper">
         {step === 0 && <PersonalStep data={form} onChange={handleChange} errors={errors} />}
         {step === 1 && (
-          <OTPStep data={form} onChange={handleChange} errors={errors}
-            otpSent={otpSent} onSendOtp={handleSendOtp} otpLoading={otpLoading} />
+          <OtpStep
+            data={form}
+            onChange={handleChange}
+            onSendOtp={handleSendOtp}
+            otpSent={otpSent}
+            errors={errors}
+          />
         )}
         {step === 2 && <IdentityStep data={form} onChange={handleChange} errors={errors} />}
         {step === 3 && <BankStep data={form} onChange={handleChange} errors={errors} />}
         {step === 4 && <LandStep data={form} onChange={handleChange} errors={errors} />}
         {step === 5 && <DocumentStep file={file} onFileChange={setFile} errors={errors} />}
-        {step === 6 && <DeclarationStep data={form} onChange={handleChange} errors={errors} />}
+        {step === 6 && (
+          <DeclarationStep
+            data={form}
+            onChange={handleChange}
+            form={form}
+            file={file}
+            errors={errors}
+          />
+        )}
 
-        {/* Submit error */}
         {submitError && (
-          <div className="flex items-start gap-2 bg-red-50 border border-red-200 text-red-700 rounded-lg p-3 mt-4 text-sm">
-            <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <span>{submitError}</span>
+          <div className="border border-accent bg-paper text-accent p-3 mt-6 font-mono text-xs">
+            <strong>[SUBMISSION REJECTED]</strong> {submitError}
           </div>
         )}
 
-        {/* Navigation */}
-        <div className="flex justify-between mt-8 pt-6 border-t border-gray-100">
-          <button
-            type="button"
-            onClick={handleBack}
-            disabled={step === 0}
-            className="flex items-center gap-2 btn-secondary disabled:opacity-40"
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back
-          </button>
+        {/* Action Controls */}
+        <div className="flex items-center justify-between pt-8 mt-8 border-t border-paper-line">
+          {step > 0 ? (
+            <button
+              type="button"
+              onClick={handleBack}
+              disabled={submitting}
+              className="btn-secondary"
+            >
+              ← Previous Step
+            </button>
+          ) : (
+            <Link to="/dashboard" className="font-mono text-xs text-ink-faint hover:text-ink underline">
+              Cancel Filing
+            </Link>
+          )}
 
           {step < STEPS.length - 1 ? (
-            <button type="button" onClick={handleNext} className="flex items-center gap-2 btn-primary">
-              Next
-              <ChevronRight className="w-4 h-4" />
+            <button
+              type="button"
+              onClick={handleNext}
+              className="btn-primary"
+            >
+              Continue to Step {STEPS[step + 1].code} →
             </button>
           ) : (
             <button
               type="button"
               onClick={handleSubmit}
               disabled={submitting}
-              className="flex items-center gap-2 btn-primary bg-gov-green hover:bg-green-700"
+              className="btn-accent"
             >
-              {submitting ? 'Submitting…' : 'Submit Application'}
-              <CheckCircle className="w-4 h-4" />
+              {submitting ? '[ TRANSMITTING DOCKET... ]' : 'Lodge Formal Claim →'}
             </button>
           )}
         </div>

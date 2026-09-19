@@ -1,6 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Leaf, LayoutDashboard, FilePlus, LogOut, User, ShieldAlert } from 'lucide-react'
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth()
@@ -13,115 +12,155 @@ export default function Layout({ children }) {
   }
 
   const navLinks = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'My Dashboard' },
-    { to: '/apply', icon: FilePlus, label: 'Apply for PM-KISAN' },
+    { to: '/dashboard', label: 'My Applications' },
+    { to: '/apply', label: 'File New Claim' },
   ]
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Government Header Bar */}
-      <div className="bg-gov-navy text-white py-1 px-4 text-xs flex items-center justify-between">
-        <span>Government of India | Ministry of Agriculture &amp; Farmers Welfare</span>
-        <span className="hidden sm:block">Digital India • Kisan Kalyan</span>
+    <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans">
+      {/* 3-Color Subtle National Tri-Band Motif */}
+      <div className="h-[3px] w-full flex">
+        <div className="h-full w-1/3 bg-[#f97316]"></div>
+        <div className="h-full w-1/3 bg-white border-y border-slate-300"></div>
+        <div className="h-full w-1/3 bg-[#16a34a]"></div>
       </div>
 
-      {/* Admin Officer Notification Banner */}
+      {/* Top Government of India Official Utility Ribbon */}
+      <div className="border-b border-slate-200 bg-slate-100/80 px-4 py-1.5 font-mono text-[11px] text-slate-700">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1">
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-slate-900 tracking-wider">भारत सरकार</span>
+            <span className="text-slate-400">|</span>
+            <span className="font-semibold text-slate-800">Government of India</span>
+            <span className="text-slate-400">|</span>
+            <span className="hidden md:inline text-slate-600">कृषि एवं किसान कल्याण मंत्रालय</span>
+            <span className="hidden md:inline text-slate-400">|</span>
+            <span className="hidden lg:inline text-slate-600">Ministry of Agriculture &amp; Farmers Welfare</span>
+          </div>
+          <div className="flex items-center gap-3 text-[10px] text-slate-600 uppercase tracking-wider">
+            <span>Direct Benefit Transfer (DBT)</span>
+            <span className="text-slate-400">|</span>
+            <span>GIGW 3.0 Standard</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Admin Switcher Banner if Officer is in Citizen View */}
       {user?.role === 'ADMIN' && (
-        <div className="bg-red-950 text-red-200 border-b border-red-800 py-1.5 px-4 text-xs flex items-center justify-between">
-          <span className="flex items-center gap-1.5 font-medium">
-            <ShieldAlert className="w-4 h-4 text-red-400" />
-            Active Role: Scheme Verification Officer (Previewing Citizen View)
-          </span>
-          <Link to="/admin" className="bg-red-800 hover:bg-red-700 text-white px-2.5 py-0.5 rounded text-xs font-semibold transition-colors">
-            Go to Admin Review Console →
+        <div className="border-b border-amber-300 bg-amber-50 px-4 py-1.5 font-mono text-xs text-amber-900 flex items-center justify-between">
+          <span className="font-semibold">[OFFICER PRIVILEGE ACTIVE: CITIZEN PREVIEW MODE]</span>
+          <Link
+            to="/admin"
+            className="border border-amber-800 bg-white text-amber-900 px-2.5 py-0.5 font-mono text-[11px] uppercase tracking-wider hover:bg-amber-900 hover:text-white transition-colors font-bold"
+          >
+            Return to Officer Console →
           </Link>
         </div>
       )}
 
-      {/* Main Header */}
-      <header className="bg-gov-blue shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link to="/dashboard" className="flex items-center gap-3 text-white">
-            <div className="bg-gov-green p-2 rounded-lg">
-              <Leaf className="w-6 h-6 text-white" />
+      {/* Main Departmental Masthead */}
+      <header className="border-b border-slate-200 bg-white">
+        <div className="max-w-6xl mx-auto px-4 py-3.5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5">
+            {/* Ashoka Emblem Representation */}
+            <div className="border-r-2 border-slate-300 pr-3.5 text-center font-serif leading-none select-none">
+              <div className="text-[12px] font-bold tracking-widest text-slate-800">सत्यमेव जयते</div>
+              <div className="text-[8px] uppercase tracking-wider text-slate-500 font-sans mt-0.5 font-bold">Govt. of India</div>
             </div>
+
             <div>
-              <h1 className="text-lg font-bold leading-tight">KisanGuard Portal</h1>
-              <p className="text-blue-200 text-xs">PM-KISAN Scheme Application System</p>
+              <Link to="/dashboard" className="block text-left group">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-serif text-xl sm:text-2xl font-bold tracking-tight text-slate-900">
+                    PM-KISAN <span className="text-emerald-800 font-normal">| किसान सम्मान निधि</span>
+                  </span>
+                  <span className="font-mono text-[10px] uppercase tracking-wider text-emerald-800 border border-emerald-300 bg-emerald-50 px-1.5 py-0.5 font-bold">
+                    CITIZEN PORTAL
+                  </span>
+                </div>
+                <p className="font-sans text-xs text-slate-600 font-medium">
+                  Pradhan Mantri Kisan Samman Nidhi • Direct Benefit Transfer &amp; Land Record Verification
+                </p>
+              </Link>
             </div>
-          </Link>
+          </div>
 
-          {/* Desktop Nav */}
-          <nav className="hidden md:flex items-center gap-2">
-            {navLinks.map(({ to, icon: Icon, label }) => (
-              <Link
-                key={to}
-                to={to}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  location.pathname === to
-                    ? 'bg-white/20 text-white'
-                    : 'text-blue-100 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-              </Link>
-            ))}
-          </nav>
-
-          {/* User menu */}
-          <div className="flex items-center gap-3">
-            {user?.role === 'ADMIN' && (
-              <Link
-                to="/admin"
-                className="hidden sm:flex items-center gap-1.5 bg-red-700 hover:bg-red-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow transition-colors"
-              >
-                <ShieldAlert className="w-3.5 h-3.5" />
-                Officer Console
-              </Link>
-            )}
-            <div className="hidden sm:flex items-center gap-2 text-blue-100 text-sm">
-              <User className="w-4 h-4" />
-              <span className="max-w-[140px] truncate">{user?.full_name || user?.email}</span>
+          {/* User Menu */}
+          <div className="flex items-center gap-3 border-t md:border-t-0 md:border-l border-slate-200 pt-2 md:pt-0 md:pl-4 font-mono text-xs">
+            <div className="text-right text-[11px] leading-tight">
+              <span className="block font-semibold text-slate-900 truncate max-w-[150px]">
+                {user?.full_name || user?.email}
+              </span>
+              <span className="text-[10px] text-slate-500 block">AUTHENTICATED CULTIVATOR</span>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1.5 bg-white/10 hover:bg-white/20 text-white px-3 py-2 rounded-lg text-sm transition-colors"
+              className="border border-slate-300 hover:border-red-400 hover:bg-red-50 hover:text-red-800 text-slate-700 px-2.5 py-1 text-[11px] uppercase tracking-wider transition-colors font-semibold"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="hidden sm:block">Logout</span>
+              Logout
             </button>
           </div>
         </div>
 
-        {/* Mobile Nav */}
-        <div className="md:hidden border-t border-white/10 px-4 py-2 flex gap-2">
-          {navLinks.map(({ to, icon: Icon, label }) => (
-            <Link
-              key={to}
-              to={to}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium flex-1 justify-center transition-colors ${
-                location.pathname === to
-                  ? 'bg-white/20 text-white'
-                  : 'text-blue-100 hover:bg-white/10'
-              }`}
-            >
-              <Icon className="w-3.5 h-3.5" />
-              {label}
-            </Link>
-          ))}
+        {/* Primary Navigation Ribbon (Institutional Green Bar) */}
+        <div className="border-t border-slate-200 bg-emerald-900 text-white">
+          <div className="max-w-6xl mx-auto px-4 flex items-center justify-between">
+            <nav className="flex items-center font-mono text-xs uppercase tracking-wider">
+              {navLinks.map(({ to, label }) => {
+                const isActive = location.pathname === to
+                return (
+                  <Link
+                    key={to}
+                    to={to}
+                    className={`px-4 py-2.5 border-b-2 transition-colors font-medium ${
+                      isActive
+                        ? 'border-white bg-emerald-950 text-white font-bold'
+                        : 'border-transparent text-emerald-100 hover:bg-emerald-800 hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                )
+              })}
+            </nav>
+
+            <span className="hidden sm:inline font-mono text-[10px] text-emerald-200 uppercase tracking-widest">
+              HELP: 155261 (TOLL FREE)
+            </span>
+          </div>
         </div>
       </header>
 
-      {/* Page Content */}
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-6">
+      {/* Main Page Body */}
+      <main className="flex-1 max-w-6xl w-full mx-auto px-4 py-6">
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gov-navy text-blue-200 text-xs text-center py-3 mt-auto">
-        <p>© 2024 KisanGuard Portal | Ministry of Agriculture &amp; Farmers Welfare, Government of India</p>
-        <p className="mt-0.5">For helpline: 155261 | Email: pmkisan-ict@gov.in</p>
+      {/* Formal Government Statutory Footer */}
+      <footer className="border-t border-slate-300 bg-white py-6 px-4 font-mono text-xs text-slate-600 mt-auto">
+        <div className="max-w-6xl mx-auto space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-200 pb-3 text-[11px]">
+            <div>
+              <span className="font-bold text-slate-900">PRADHAN MANTRI KISAN SAMMAN NIDHI (PM-KISAN)</span>
+              <span className="block text-slate-500 font-sans text-xs mt-0.5">
+                Department of Agriculture and Farmers Welfare, Ministry of Agriculture &amp; Farmers Welfare, Krishi Bhawan, New Delhi
+              </span>
+            </div>
+            <div className="text-left sm:text-right font-mono text-[10px] text-slate-600">
+              <span>BHULEKH &amp; PFMS VERIFICATION PROTOCOL</span>
+              <span className="block text-slate-500">DIGITAL PERSONAL DATA PROTECTION COMPLIANT</span>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-[10px] text-slate-500 font-sans">
+            <p>
+              Website Content Managed by <strong>Ministry of Agriculture &amp; Farmers Welfare</strong>, Government of India.
+            </p>
+            <p className="font-mono">
+              PM-KISAN Helpline: <strong>155261</strong> / <strong>011-24300606</strong> (Toll Free: <strong>1800-115-526</strong>)
+            </p>
+          </div>
+        </div>
       </footer>
     </div>
   )

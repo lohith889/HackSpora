@@ -1,49 +1,49 @@
 /**
  * Maps backend application statuses to citizen-friendly display info.
- * Risk scores and anomaly details are NEVER exposed here (FARM-03).
+ * Settled light theme: gentle contrast, institutional clarity.
  */
 export const STATUS_CONFIG = {
   SUBMITTED: {
-    label: 'Application Submitted',
-    color: 'bg-blue-100 text-blue-800',
-    description: 'Your application has been received and is awaiting initial review.',
-    icon: '📋',
+    label: 'Application Logged',
+    badge: 'border border-slate-300 bg-slate-100 text-slate-800 font-mono',
+    description: 'Your application has been received into the queue and is awaiting cross-registry verification.',
+    code: '[LOGGED]',
   },
   UNDER_REVIEW: {
-    label: 'Under Review',
-    color: 'bg-yellow-100 text-yellow-800',
-    description: 'Your application is currently being reviewed by scheme officers.',
-    icon: '🔍',
+    label: 'Under Verification',
+    badge: 'border border-amber-300 bg-amber-50 text-amber-900 font-mono',
+    description: 'Application details are undergoing reconciliation with state land and PFMS records.',
+    code: '[IN AUDIT]',
   },
   APPROVED: {
-    label: 'Approved',
-    color: 'bg-green-100 text-green-800',
-    description: 'Congratulations! Your application has been approved. Benefit disbursement will follow.',
-    icon: '✅',
+    label: 'Claim Approved',
+    badge: 'border border-emerald-300 bg-emerald-50 text-emerald-900 font-mono font-bold',
+    description: 'Application approved by scheme officer. Entitlement granted for PM-KISAN subsidy.',
+    code: '[APPROVED]',
   },
   REJECTED: {
-    label: 'Not Eligible',
-    color: 'bg-red-100 text-red-800',
-    description: 'Your application could not be approved. Please contact your local Kisan Seva Kendra for guidance.',
-    icon: '❌',
+    label: 'Ineligible Claim',
+    badge: 'border border-red-300 bg-red-50 text-red-900 font-mono font-bold',
+    description: 'Claim determined ineligible under statutory PM-KISAN exclusion criteria.',
+    code: '[REJECTED]',
   },
   HOLD: {
-    label: 'On Hold — Documents Needed',
-    color: 'bg-orange-100 text-orange-800',
-    description: 'Your application is on hold. Please visit your nearest PM-KISAN Seva Kendra with original land documents.',
-    icon: '⏸️',
+    label: 'Adjudication Held',
+    badge: 'border border-amber-400 bg-amber-50 text-amber-900 font-mono font-bold',
+    description: 'Verification on hold pending scheme officer review or field inspection.',
+    code: '[HELD]',
   },
   REQUEST_DOCUMENTS: {
-    label: 'Additional Documents Required',
-    color: 'bg-purple-100 text-purple-800',
-    description: 'Please submit the required documents at your nearest Common Service Centre (CSC).',
-    icon: '📄',
+    label: 'Evidence Required',
+    badge: 'border border-slate-400 bg-slate-100 text-slate-900 font-mono font-bold',
+    description: 'Please submit fresh revenue proof or Khasra extract to the scheme officer.',
+    code: '[DOCS REQ]',
   },
   ESCALATED: {
-    label: 'Under Special Review',
-    color: 'bg-gray-100 text-gray-800',
-    description: 'Your application has been referred for additional verification. This process may take additional time.',
-    icon: '📤',
+    label: 'Special Review Docket',
+    badge: 'border border-rose-300 bg-rose-50 text-rose-900 font-mono font-bold',
+    description: 'Application referred to district revenue magistrate for legal determination.',
+    code: '[ESCALATED]',
   },
 }
 

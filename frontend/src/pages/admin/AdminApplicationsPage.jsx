@@ -3,12 +3,6 @@ import { adminAPI } from '../../api/client'
 import { getRiskTier, getStatusBadge, exportToCSV, formatDateTime, SEVERITY_COLORS } from '../../utils/adminUtils'
 import { Link, useSearchParams } from 'react-router-dom'
 import Spinner from '../../components/Spinner'
-import {
-  Search, Download, RefreshCw, Filter, Eye,
-  ChevronUp, ChevronDown, X, ShieldAlert, CheckCircle2,
-  AlertTriangle, PauseCircle, HelpCircle, XCircle, Send,
-  FileText, ExternalLink, MapPin, Landmark, User, Layers
-} from 'lucide-react'
 
 const STATUS_OPTIONS = [
   'SUBMITTED', 'UNDER_REVIEW', 'APPROVED', 'REJECTED',
@@ -16,11 +10,11 @@ const STATUS_OPTIONS = [
 ]
 
 const DECISION_OPTIONS = [
-  { value: 'APPROVE',           label: '✅ Approve',                    color: 'bg-green-700 hover:bg-green-600'  },
-  { value: 'HOLD',              label: '⏸️ Hold Payment',               color: 'bg-yellow-700 hover:bg-yellow-600'},
-  { value: 'REQUEST_DOCUMENTS', label: '📄 Request Documents',          color: 'bg-purple-700 hover:bg-purple-600'},
-  { value: 'REJECT',            label: '❌ Reject',                     color: 'bg-red-700 hover:bg-red-600'     },
-  { value: 'ESCALATE',          label: '📤 Escalate for Investigation', color: 'bg-blue-700 hover:bg-blue-600'   },
+  { value: 'APPROVE',           label: 'APPROVE ENTITLEMENT',          code: '[APPROVE]',  desc: 'Verify records & authorize subsidy' },
+  { value: 'HOLD',              label: 'HOLD PAYMENT',                 code: '[HOLD]',     desc: 'Place payment on hold pending inquiry' },
+  { value: 'REQUEST_DOCUMENTS', label: 'REQUEST REVENUE DOCUMENTS',    code: '[DOCS REQ]', desc: 'Notify applicant to supply fresh proof' },
+  { value: 'REJECT',            label: 'REJECT CLAIM',                 code: '[REJECT]',   desc: 'Disqualify based on exclusion hit' },
+  { value: 'ESCALATE',          label: 'ESCALATE TO MAGISTRATE',       code: '[ESCALATE]', desc: 'Refer to district revenue investigation' },
 ]
 
 // ── Quick Anomaly Dossier Slide-Over Modal (ADM-04) ──────────────────────────
@@ -44,7 +38,7 @@ function QuickDossierDrawer({ app, onClose, onDecisionSuccess }) {
       return
     }
     if (remarks.trim().length < 10) {
-      setError('Officer remarks must be at least 10 characters justifying the adjudication.')
+      setError('Officer remarks must be at least 10 characters justifying the statutory determination.')
       return
     }
 
@@ -65,171 +59,128 @@ function QuickDossierDrawer({ app, onClose, onDecisionSuccess }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end bg-black/70 backdrop-blur-xs animate-in fade-in">
-      <div className="w-full max-w-2xl bg-gray-900 border-l border-gray-800 text-white flex flex-col h-full shadow-2xl relative">
+    <div className="fixed inset-0 z-50 overflow-hidden flex justify-end bg-slate-900/50 backdrop-blur-[1px]">
+      <div className="w-full max-w-2xl bg-white border-l border-slate-300 text-slate-900 flex flex-col h-full relative font-sans text-left shadow-2xl">
+        {/* Tri-color top stripe */}
+        <div className="h-1 flex w-full">
+          <div className="bg-[#f97316] w-1/3" />
+          <div className="bg-white w-1/3 border-b border-slate-200" />
+          <div className="bg-[#16a34a] w-1/3" />
+        </div>
+
         {/* Drawer Header */}
-        <div className="px-6 py-4 border-b border-gray-800 flex items-center justify-between bg-gray-950">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-red-950 border border-red-800 rounded-lg text-red-400">
-              <ShieldAlert className="w-5 h-5" />
+        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold">FORM AD-4 // CASE DOSSIER</span>
+              <span className={`stamp text-[10px] ${st.color}`}>
+                {st.label}
+              </span>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-bold font-mono tracking-tight text-white">
-                  APP-{String(app.id).padStart(6, '0')}
-                </h2>
-                <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${st.color}`}>
-                  {st.label}
-                </span>
-              </div>
-              <p className="text-xs text-gray-400">Scheme Officer Quick Anomaly Dossier Inspector</p>
-            </div>
+            <h2 className="text-xl font-bold font-mono tracking-tight text-slate-900 mt-0.5">
+              APP-{String(app.id).padStart(6, '0')}
+            </h2>
+            <p className="font-sans text-xs text-slate-600">
+              Cultivator: <strong className="text-slate-900">{app.farmer_name}</strong> • Parcel: <span className="font-mono">{app.parcel_id || '—'}</span>
+            </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-gray-400 hover:text-white rounded-lg hover:bg-gray-800 transition-colors"
+            className="border border-slate-300 bg-white hover:bg-slate-100 px-3 py-1.5 font-mono text-xs text-slate-700 transition-colors"
           >
-            <X className="w-5 h-5" />
+            [CLOSE ×]
           </button>
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Key Metrics Banner */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <div className="bg-gray-800/80 border border-gray-700/60 rounded-xl p-3">
-              <span className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold block">Risk Score</span>
-              <div className="flex items-center gap-2 mt-1">
-                <span className={`text-xl font-bold font-mono px-2 py-0.5 rounded-md ${tier.color}`}>
-                  {app.risk_score != null ? `${app.risk_score}/100` : '—'}
-                </span>
-                <span className="text-xs text-gray-400">{tier.label}</span>
-              </div>
-            </div>
-
-            <div className="bg-gray-800/80 border border-gray-700/60 rounded-xl p-3">
-              <span className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold block">Confidence</span>
-              <div className="mt-1">
-                <span className="text-lg font-bold font-mono text-blue-300">
-                  {app.confidence_score != null ? `${app.confidence_score}%` : '85%'}
-                </span>
-                <span className="text-xs text-gray-400 block">{app.confidence_level || 'High'} Certainty</span>
-              </div>
-            </div>
-
-            <div className="bg-gray-800/80 border border-gray-700/60 rounded-xl p-3 col-span-2 sm:col-span-1">
-              <span className="text-[11px] uppercase tracking-wider text-gray-400 font-semibold block">Recommendation</span>
-              <span className="text-xs font-medium text-yellow-300 bg-yellow-950/60 border border-yellow-800/50 px-2 py-1 rounded-md mt-1 inline-block">
-                {app.recommended_action || 'Review Flags'}
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {/* Metrics Rule */}
+          <div className="grid grid-cols-3 gap-3 font-mono text-xs">
+            <div className="border border-slate-200 p-3 bg-slate-50">
+              <span className="text-[10px] text-slate-500 uppercase block font-semibold">RISK ASSESSMENT</span>
+              <span className={`text-xl font-bold block mt-0.5 ${app.risk_score >= 50 ? 'text-red-700' : 'text-slate-900'}`}>
+                {app.risk_score ?? 0} / 100
               </span>
+              <span className="text-[10px] text-slate-500 uppercase font-semibold">{tier.label}</span>
+            </div>
+            <div className="border border-slate-200 p-3 bg-slate-50">
+              <span className="text-[10px] text-slate-500 uppercase block font-semibold">CONFIDENCE INDEX</span>
+              <span className="text-xl font-bold text-slate-900 block mt-0.5">
+                {app.confidence_score ?? 85}%
+              </span>
+              <span className="text-[10px] text-slate-500 uppercase font-semibold">{app.confidence_level || 'Medium'}</span>
+            </div>
+            <div className="border border-slate-200 p-3 bg-slate-50">
+              <span className="text-[10px] text-slate-500 uppercase block font-semibold">ANOMALY TRIGGERS</span>
+              <span className={`text-xl font-bold block mt-0.5 ${flags.length > 0 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                {flags.length}
+              </span>
+              <span className="text-[10px] text-slate-500 uppercase font-semibold">{flags.length === 0 ? 'CLEARED' : 'TRIGGERS'}</span>
             </div>
           </div>
 
-          {/* Applicant Summary */}
-          <div className="bg-gray-850 border border-gray-800 rounded-xl p-4 space-y-2 text-sm">
-            <div className="flex items-center justify-between border-b border-gray-800 pb-2">
-              <span className="text-gray-400 flex items-center gap-1.5 text-xs">
-                <User className="w-3.5 h-3.5" /> Farmer Name:
-              </span>
-              <span className="font-semibold text-white">{app.farmer_name}</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-gray-800 pb-2">
-              <span className="text-gray-400 text-xs">Masked Aadhaar:</span>
-              <span className="font-mono text-gray-300 text-xs">{app.aadhaar_masked || 'XXXX-XXXX-****'}</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-gray-800 pb-2">
-              <span className="text-gray-400 flex items-center gap-1.5 text-xs">
-                <MapPin className="w-3.5 h-3.5" /> Parcel ID:
-              </span>
-              <span className="font-mono text-blue-300 text-xs truncate max-w-[280px]">{app.parcel_id}</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-gray-800 pb-2">
-              <span className="text-gray-400 flex items-center gap-1.5 text-xs">
-                <Landmark className="w-3.5 h-3.5" /> Bank IFSC Key:
-              </span>
-              <span className="font-mono text-gray-300 text-xs">{app.bank_account_ifsc_key || `${app.bank_account_number}-${app.ifsc_code}`}</span>
-            </div>
-            <div className="flex items-center justify-between pt-1">
-              <span className="text-gray-400 text-xs">Location:</span>
-              <span className="text-gray-300 text-xs">
-                District {app.district_code || '—'} • Village {app.village_code || '—'}
-              </span>
-            </div>
-          </div>
-
-          {/* Natural Language Rationale */}
-          {app.anomaly_report?.rationale && (
-            <div className="bg-blue-950/30 border border-blue-900/60 rounded-xl p-4">
-              <span className="text-xs font-bold text-blue-300 uppercase tracking-wide flex items-center gap-1.5 mb-1.5">
-                <FileText className="w-3.5 h-3.5" /> AI Explainability Rationale
-              </span>
-              <p className="text-sm text-gray-200 leading-relaxed">
-                {app.anomaly_report.rationale}
-              </p>
+          {/* AI Recommended Action */}
+          {app.recommended_action && (
+            <div className="border border-slate-200 p-3 bg-slate-50 font-mono text-xs flex items-center justify-between">
+              <div>
+                <span className="text-slate-500 uppercase text-[10px] block font-semibold">RECOMMENDED ADJUDICATION:</span>
+                <span className="text-slate-900 font-bold block mt-0.5">{app.recommended_action}</span>
+              </div>
+              <span className="text-[10px] text-slate-500 uppercase border border-slate-200 px-2 py-0.5 bg-white font-mono">AUTOMATED ENGINE</span>
             </div>
           )}
 
-          {/* Triggered Anomaly Flags */}
+          {/* Anomaly Flags Accordion */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                <Layers className="w-4 h-4 text-red-400" />
-                Triggered Anomaly Flags ({flags.length})
+            <div className="flex justify-between items-baseline border-b border-slate-200 pb-2 mb-3">
+              <h3 className="font-serif text-sm font-bold text-slate-900 uppercase tracking-wide">
+                Detected Cross-Registry Signals ({flags.length})
               </h3>
-              <span className="text-xs text-gray-500">8 Engines Audited</span>
+              <span className="font-mono text-[10px] text-slate-500 uppercase">Verification Rules 1-8</span>
             </div>
 
             {flags.length === 0 ? (
-              <div className="bg-gray-850 border border-gray-800 rounded-xl p-4 text-center text-sm text-green-400">
-                <CheckCircle2 className="w-5 h-5 mx-auto mb-1 text-green-400" />
-                Zero anomaly flags triggered. Application aligns with master registry baselines.
+              <div className="p-4 border border-paper-line bg-paper-subtle font-mono text-xs text-ink-muted text-center">
+                ✓ No anomaly triggers detected. Application appears compliant.
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {flags.map((flag, idx) => {
                   const isExpanded = expandedFlagIndex === idx
-                  const sevClass = SEVERITY_COLORS[flag.severity] || SEVERITY_COLORS.Low
+                  const sevColor = SEVERITY_COLORS[flag.severity] || 'border-slate-200 text-slate-700 bg-slate-50'
                   return (
                     <div
-                      key={idx}
-                      className="bg-gray-850 border border-gray-700/80 rounded-xl p-3.5 hover:border-gray-600 transition-colors"
+                      key={flag.anomaly_code || idx}
+                      className="border border-slate-200 bg-white transition-colors"
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="bg-gray-800 border border-gray-700 font-mono text-xs px-2 py-0.5 rounded text-blue-300">
-                            {flag.anomaly_code}
+                      <button
+                        onClick={() => setExpandedFlagIndex(isExpanded ? null : idx)}
+                        className="w-full text-left p-3 flex items-center justify-between gap-2 hover:bg-slate-50"
+                      >
+                        <div className="flex items-center gap-2 font-mono text-xs">
+                          <span className={`stamp text-[10px] ${sevColor}`}>
+                            {flag.severity || 'FLAG'}
                           </span>
-                          <span className={`text-[11px] px-2 py-0.5 rounded-full font-bold uppercase ${sevClass}`}>
-                            {flag.severity}
-                          </span>
-                          <span className="bg-red-950/70 border border-red-800/60 text-red-300 text-[11px] px-2 py-0.5 rounded font-mono font-bold">
-                            +{flag.score} pts
-                          </span>
+                          <span className="font-bold text-slate-900">{flag.anomaly_code}</span>
                         </div>
+                        <span className="font-mono text-xs text-slate-500">
+                          {isExpanded ? '[-] HIDE' : '[+] INSPECT'}
+                        </span>
+                      </button>
 
-                        {flag.evidence_json && Object.keys(flag.evidence_json).length > 0 && (
-                          <button
-                            onClick={() => setExpandedFlagIndex(isExpanded ? null : idx)}
-                            className="text-xs text-gray-400 hover:text-white flex items-center gap-1 flex-shrink-0"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            {isExpanded ? 'Hide Raw' : 'Inspect Raw'}
-                          </button>
-                        )}
-                      </div>
-
-                      <p className="text-xs text-gray-300 mt-2 leading-relaxed">
-                        {flag.rationale}
-                      </p>
-
-                      {isExpanded && flag.evidence_json && (
-                        <div className="mt-3 bg-gray-950 p-3 rounded-lg border border-gray-800 overflow-x-auto">
-                          <span className="text-[10px] text-gray-500 font-mono block mb-1">
-                            Raw Engine Evidence Payload:
-                          </span>
-                          <pre className="text-[11px] font-mono text-green-300 leading-tight">
-                            {JSON.stringify(flag.evidence_json, null, 2)}
-                          </pre>
+                      {isExpanded && (
+                        <div className="px-3 pb-3 pt-1 border-t border-slate-200 font-mono text-xs space-y-2 bg-slate-50">
+                          <p className="text-slate-800 font-sans text-xs">{flag.description}</p>
+                          {flag.rationale && (
+                            <div className="p-2 border border-slate-200 bg-white text-slate-700 text-[11px] leading-relaxed">
+                              <strong className="text-slate-900 font-semibold">Statutory Rationale: </strong>
+                              {flag.rationale}
+                            </div>
+                          )}
+                          <div className="flex gap-4 text-[10px] text-slate-500 pt-1">
+                            <span>CERTAINTY: {flag.confidence || 'HIGH'}</span>
+                            <span>WEIGHT: {flag.weight ?? 1.0}</span>
+                          </div>
                         </div>
                       )}
                     </div>
@@ -239,113 +190,141 @@ function QuickDossierDrawer({ app, onClose, onDecisionSuccess }) {
             )}
           </div>
 
-          {/* Quick Adjudication Decision Form (ADM-05) */}
-          <div className="bg-gray-950 border border-gray-800 rounded-xl p-4 space-y-3">
-            <h3 className="text-xs font-bold text-gray-300 uppercase tracking-wide flex items-center gap-1.5">
-              <CheckCircle2 className="w-4 h-4 text-blue-400" />
-              Quick Officer Adjudication (Immutable Audit Trail)
-            </h3>
+          {/* Quick Adjudication Form (ADM-04 Requirement) */}
+          <div className="border border-slate-200 p-5 bg-slate-50 space-y-4">
+            <div className="border-b border-slate-200 pb-2">
+              <span className="text-[10px] font-mono uppercase text-slate-500 font-semibold block">SECTION 4(2) ADJUDICATION ORDER</span>
+              <h3 className="font-serif text-sm font-bold text-slate-900 mt-0.5">
+                Competent Authority Determination
+              </h3>
+              <p className="font-sans text-xs text-slate-600 mt-0.5">
+                Enter formal administrative determination and required legal justification into the permanent audit ledger.
+              </p>
+            </div>
 
-            {successMsg ? (
-              <div className="bg-green-950/80 border border-green-800 text-green-300 text-xs p-3 rounded-lg flex items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-                <span>{successMsg}</span>
+            {error && (
+              <div className="p-3 border border-red-300 bg-red-50 font-mono text-xs text-red-800">
+                [ERROR] {error}
               </div>
-            ) : (
-              <>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {DECISION_OPTIONS.map(opt => (
-                    <button
-                      key={opt.value}
-                      onClick={() => setDecision(opt.value)}
-                      className={`text-xs font-medium py-2 px-2.5 rounded-lg border transition-all text-left truncate ${
-                        decision === opt.value
-                          ? `${opt.color} text-white border-white/40 shadow-sm`
-                          : 'bg-gray-850 border-gray-700 text-gray-300 hover:bg-gray-800'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-
-                <div>
-                  <label className="block text-[11px] uppercase tracking-wider text-gray-400 font-medium mb-1">
-                    Adjudication Remarks (Mandatory, min 10 chars) *
-                  </label>
-                  <textarea
-                    value={remarks}
-                    onChange={e => setRemarks(e.target.value)}
-                    rows={2}
-                    placeholder="Enter official reasoning for this determination…"
-                    className="w-full bg-gray-850 border border-gray-700 text-xs text-white rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-600 resize-none"
-                  />
-                </div>
-
-                {error && (
-                  <p className="text-xs text-red-400 bg-red-950/50 border border-red-800/60 p-2 rounded">
-                    {error}
-                  </p>
-                )}
-
-                <button
-                  onClick={handleDecisionSubmit}
-                  disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 bg-gov-blue hover:bg-blue-700 disabled:opacity-50 text-white text-xs font-semibold py-2.5 rounded-lg transition-colors shadow-md"
-                >
-                  <Send className="w-3.5 h-3.5" />
-                  {submitting ? 'Recording Adjudication…' : 'Record Adjudication & Update Audit Trail'}
-                </button>
-              </>
             )}
+
+            {successMsg && (
+              <div className="p-3 border border-emerald-300 bg-emerald-50 font-mono text-xs text-emerald-800 font-bold">
+                ✓ {successMsg}
+              </div>
+            )}
+
+            {/* Decision Radio Grid */}
+            <div className="space-y-2 font-mono text-xs">
+              <label className="block text-slate-700 uppercase text-[10px] font-semibold">Select Adjudication Action:</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {DECISION_OPTIONS.map((opt) => (
+                  <label
+                    key={opt.value}
+                    className={`p-2.5 border cursor-pointer flex flex-col justify-between transition-colors ${
+                      decision === opt.value
+                        ? 'border-slate-900 bg-slate-900 text-white font-bold'
+                        : 'border-slate-200 bg-white hover:border-slate-400 text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px]">{opt.label}</span>
+                      <span className={`text-[10px] ${decision === opt.value ? 'text-slate-300' : 'text-slate-500'}`}>{opt.code}</span>
+                    </div>
+                    <span className={`text-[10px] font-sans mt-1 ${decision === opt.value ? 'text-slate-300' : 'text-slate-600'}`}>
+                      {opt.desc}
+                    </span>
+                    <input
+                      type="radio"
+                      name="decision"
+                      value={opt.value}
+                      checked={decision === opt.value}
+                      onChange={(e) => setDecision(e.target.value)}
+                      className="sr-only"
+                    />
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            {/* Remarks / Justification Input */}
+            <div className="font-mono text-xs space-y-1">
+              <label className="block text-slate-700 uppercase text-[10px] font-semibold">
+                Mandatory Written Justification (min 10 characters):
+              </label>
+              <textarea
+                rows={3}
+                value={remarks}
+                onChange={(e) => setRemarks(e.target.value)}
+                placeholder="Cite statutory provisions, Bhulekh findings, and verification reasoning..."
+                className="w-full bg-white border border-slate-300 text-slate-900 p-2.5 text-xs font-sans focus:outline-none focus:border-slate-800 rounded-none resize-none placeholder:text-slate-400"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={handleDecisionSubmit}
+                disabled={submitting}
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white font-mono text-xs uppercase tracking-wider py-2.5 px-4 font-bold transition-colors disabled:opacity-50"
+              >
+                {submitting ? 'COMMITTING TO AUDIT LEDGER...' : 'AUTHORIZE STATUTORY ORDER ➔'}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Drawer Footer with Full Page Link */}
-        <div className="px-6 py-3 border-t border-gray-800 bg-gray-950 flex items-center justify-between">
-          <span className="text-xs text-gray-500">KisanGuard Anomaly Engine v2.0</span>
+        {/* Drawer Footer */}
+        <div className="px-6 py-3 border-t border-slate-200 bg-slate-50 flex justify-between items-center font-mono text-xs">
           <Link
             to={`/admin/applications/${app.id}`}
-            className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 font-medium group"
+            className="text-emerald-800 hover:text-emerald-950 font-bold hover:underline"
           >
-            <span>Open Full Application &amp; Cross-Registry Matrix</span>
-            <ExternalLink className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+            Open Comprehensive Evidence Dossier →
           </Link>
+          <button
+            onClick={onClose}
+            className="text-slate-600 hover:text-slate-900 underline"
+          >
+            Dismiss
+          </button>
         </div>
       </div>
     </div>
   )
 }
 
-// ── Main Page Component ───────────────────────────────────────────────────────
+// ── Main Applications Page Component ──────────────────────────────────────────
+
 export default function AdminApplicationsPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+
   const [apps, setApps] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedApp, setSelectedApp] = useState(null)
 
-  // Filter state (ADM-02 & ADM-03)
-  const [search, setSearch]             = useState('')
-  const [statusFilter, setStatus]       = useState(searchParams.get('status') || '')
-  const [districtFilter, setDist]       = useState('')
-  const [villageFilter, setVillage]     = useState('')
-  const [minRisk, setMinRisk]           = useState(searchParams.get('min_risk') || '')
-  const [maxRisk, setMaxRisk]           = useState('')
-  const [tierPreset, setTierPreset]     = useState('ALL')
-  const [sortBy, setSortBy]             = useState('risk_score')
-  const [sortDir, setSortDir]           = useState('desc')
+  // Filters
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatus] = useState(searchParams.get('status') || '')
+  const [districtFilter, setDist] = useState(searchParams.get('district') || '')
+  const [villageFilter, setVillage] = useState(searchParams.get('village') || '')
+  const [minRisk, setMinRisk] = useState(searchParams.get('min_risk') || '')
+  const [maxRisk, setMaxRisk] = useState(searchParams.get('max_risk') || '')
+  const [tierPreset, setTierPreset] = useState('ALL')
 
-  // Slide-over dossier modal state (ADM-04)
-  const [selectedApp, setSelectedApp]   = useState(null)
+  // Sorting
+  const [sortBy, setSortBy] = useState('risk_score')
+  const [sortDir, setSortDir] = useState('desc')
 
   const fetchApps = async () => {
     setLoading(true)
     try {
       const params = {}
-      if (statusFilter)   params.status   = statusFilter
+      if (statusFilter) params.status = statusFilter
       if (districtFilter) params.district = districtFilter
-      if (villageFilter)  params.village  = villageFilter
-      if (minRisk)        params.min_risk = minRisk
-      if (maxRisk)        params.max_risk = maxRisk
+      if (villageFilter) params.village = villageFilter
+      if (minRisk !== '') params.min_risk = parseInt(minRisk, 10)
+      if (maxRisk !== '') params.max_risk = parseInt(maxRisk, 10)
 
       const { data } = await adminAPI.listApplications(params)
       setApps(data)
@@ -378,7 +357,7 @@ export default function AdminApplicationsPage() {
     } else if (preset === 'LOW') {
       setMinRisk('0'); setMaxRisk('24'); setStatus('')
     } else if (preset === 'PENDING') {
-      setMinRisk(''); setMaxRisk(''); setStatus('UNDER_REVIEW')
+      setMinRisk(''); setMaxRisk(''); setStatus('SUBMITTED')
     }
   }
 
@@ -416,13 +395,6 @@ export default function AdminApplicationsPage() {
     }
   }
 
-  const SortIcon = ({ col }) => {
-    if (sortBy !== col) return <ChevronUp className="w-3 h-3 opacity-20" />
-    return sortDir === 'asc'
-      ? <ChevronUp className="w-3 h-3 text-blue-400" />
-      : <ChevronDown className="w-3 h-3 text-blue-400" />
-  }
-
   const clearFilters = () => {
     setSearch('')
     setStatus('')
@@ -433,299 +405,223 @@ export default function AdminApplicationsPage() {
     setTierPreset('ALL')
   }
 
-  const hasFilters = search || statusFilter || districtFilter || villageFilter || minRisk || maxRisk
-
   return (
-    <div>
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+    <div className="space-y-6 text-left font-sans">
+      {/* Page Header */}
+      <div className="border-b border-slate-200 pb-4 flex flex-col sm:flex-row sm:items-baseline justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white tracking-tight">Applications Review Console</h1>
-            <span className="bg-red-950 text-red-300 border border-red-800 text-xs px-2.5 py-0.5 rounded-full font-mono">
-              ADM-03 / ADM-04
+            <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+              FORM AP-LEDGER (RULES 6 &amp; 8) // REVENUE VIGILANCE QUEUE
+            </span>
+            <span className="stamp border border-slate-300 bg-slate-100 text-slate-700 text-[10px] font-semibold">
+              OFFICIAL USE ONLY
             </span>
           </div>
-          <p className="text-gray-400 text-sm mt-0.5">
-            {loading ? 'Querying registry records…' : `Displaying ${filtered.length} of ${apps.length} applications`}
+          <h1 className="font-serif text-2xl font-bold tracking-tight text-slate-900 mt-1">
+            Central Beneficiary Adjudication Register
+          </h1>
+          <p className="font-sans text-xs text-slate-600 mt-0.5">
+            Displaying <strong className="text-slate-900">{filtered.length}</strong> of <strong className="text-slate-900">{apps.length}</strong> registered cultivator subsidy claims under active surveillance
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 font-mono text-xs">
           <button
             onClick={fetchApps}
             disabled={loading}
-            className="flex items-center gap-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 px-3 py-2 rounded-lg text-sm transition-colors"
+            className="border border-slate-300 bg-white hover:bg-slate-100 text-slate-800 px-3.5 py-2 uppercase tracking-wider font-semibold transition-colors"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+            {loading ? 'Querying...' : 'Query Register ↻'}
           </button>
           <button
             onClick={() => exportToCSV(filtered)}
-            className="flex items-center gap-1.5 bg-gov-blue hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-sm font-medium transition-colors shadow-md"
+            className="bg-emerald-900 hover:bg-emerald-800 text-white px-4 py-2 uppercase tracking-wider font-semibold transition-colors"
           >
-            <Download className="w-4 h-4" /> Export CSV (ADM-06)
+            Export Verified CSV →
           </button>
         </div>
       </div>
 
-      {/* Quick Risk Tier Presets */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-4 scrollbar-none">
-        {[
-          { id: 'ALL',      label: 'All Applications',   badge: apps.length },
-          { id: 'CRITICAL', label: '🚨 Critical (>75)',   badge: apps.filter(a => (a.risk_score ?? 0) >= 75).length },
-          { id: 'HIGH',     label: '⚠️ High (50-74)',     badge: apps.filter(a => (a.risk_score ?? 0) >= 50 && (a.risk_score ?? 0) < 75).length },
-          { id: 'MODERATE', label: '🟡 Moderate (25-49)', badge: apps.filter(a => (a.risk_score ?? 0) >= 25 && (a.risk_score ?? 0) < 50).length },
-          { id: 'LOW',      label: '✅ Low (≤24)',        badge: apps.filter(a => (a.risk_score ?? 0) < 25 && a.risk_score != null).length },
-          { id: 'PENDING',  label: '⏳ Under Review',     badge: apps.filter(a => a.status === 'UNDER_REVIEW').length },
-        ].map(preset => (
+      {/* Preset Filter Bar */}
+      <div className="border border-slate-200 bg-white p-3 flex flex-wrap items-center justify-between gap-3 font-mono text-xs">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="text-slate-500 uppercase text-[10px] mr-2 font-semibold">SURVEILLANCE TIER:</span>
+          {['ALL', 'CRITICAL', 'HIGH', 'MODERATE', 'LOW', 'PENDING'].map((preset) => (
+            <button
+              key={preset}
+              onClick={() => applyTierPreset(preset)}
+              className={`px-3 py-1 border transition-colors uppercase text-[11px] ${
+                tierPreset === preset
+                  ? 'border-slate-900 bg-slate-900 text-white font-bold'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-900'
+              }`}
+            >
+              {preset}
+            </button>
+          ))}
+        </div>
+
+        {(search || statusFilter || districtFilter || minRisk || maxRisk) && (
           <button
-            key={preset.id}
-            onClick={() => applyTierPreset(preset.id)}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all border ${
-              tierPreset === preset.id
-                ? 'bg-red-900/60 border-red-600 text-white shadow-sm'
-                : 'bg-gray-900 border-gray-800 text-gray-400 hover:text-white hover:bg-gray-800'
-            }`}
+            onClick={clearFilters}
+            className="text-slate-600 hover:text-slate-900 underline text-[11px]"
           >
-            <span>{preset.label}</span>
-            <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
-              tierPreset === preset.id ? 'bg-red-700 text-white' : 'bg-gray-800 text-gray-400'
-            }`}>
-              {preset.badge}
-            </span>
+            [Clear Parameters ×]
           </button>
-        ))}
-      </div>
-
-      {/* Filters (ADM-02 & ADM-03) */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
-        <div className="flex items-center gap-2 mb-3 text-gray-400 text-sm">
-          <Filter className="w-4 h-4" /> Comprehensive Multi-Registry Filters
-          {hasFilters && (
-            <button
-              onClick={clearFilters}
-              className="ml-auto flex items-center gap-1 text-xs text-red-400 hover:text-red-300 transition-colors"
-            >
-              <X className="w-3 h-3" /> Clear all filters
-            </button>
-          )}
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {/* Search */}
-          <div className="col-span-2 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search farmer name, ID, parcel, district…"
-              className="w-full pl-9 pr-3 py-2 bg-gray-850 border border-gray-700 text-white text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
-            />
-          </div>
-
-          {/* Status */}
-          <select
-            value={statusFilter}
-            onChange={e => { setStatus(e.target.value); setTierPreset('CUSTOM') }}
-            className="bg-gray-850 border border-gray-700 text-gray-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">All Statuses</option>
-            {STATUS_OPTIONS.map(s => (
-              <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
-            ))}
-          </select>
-
-          {/* District */}
-          <input
-            value={districtFilter}
-            onChange={e => setDist(e.target.value.toUpperCase())}
-            placeholder="District (e.g. MRT)"
-            className="bg-gray-850 border border-gray-700 text-gray-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500 uppercase"
-          />
-
-          {/* Village Code (ADM-03) */}
-          <input
-            value={villageFilter}
-            onChange={e => setVillage(e.target.value.toUpperCase())}
-            placeholder="Village (e.g. VIL001)"
-            className="bg-gray-850 border border-gray-700 text-gray-300 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500 uppercase"
-          />
-
-          {/* Min Risk */}
-          <div className="flex gap-2">
-            <input
-              type="number"
-              value={minRisk}
-              onChange={e => { setMinRisk(e.target.value); setTierPreset('CUSTOM') }}
-              placeholder="Min risk"
-              min={0}
-              max={100}
-              className="w-1/2 bg-gray-850 border border-gray-700 text-gray-300 text-sm rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
-            />
-            <input
-              type="number"
-              value={maxRisk}
-              onChange={e => { setMaxRisk(e.target.value); setTierPreset('CUSTOM') }}
-              placeholder="Max risk"
-              min={0}
-              max={100}
-              className="w-1/2 bg-gray-850 border border-gray-700 text-gray-300 text-sm rounded-lg px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder-gray-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Applications Table (ADM-03) */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-xl">
-        {loading ? (
-          <div className="flex items-center justify-center py-20"><Spinner /></div>
-        ) : filtered.length === 0 ? (
-          <div className="text-center py-16 px-4">
-            <p className="text-gray-400 font-medium">No applications match your filter criteria.</p>
-            <p className="text-gray-600 text-xs mt-1">Try clearing filters or resetting the risk presets.</p>
-            <button
-              onClick={clearFilters}
-              className="mt-4 bg-gray-800 hover:bg-gray-700 text-white text-xs px-3 py-1.5 rounded-lg transition-colors"
-            >
-              Reset Filters
-            </button>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="border-b border-gray-800 bg-gray-950/60">
-                <tr className="text-gray-400 text-xs uppercase tracking-wider">
-                  {[
-                    { key: 'id',            label: 'Ref ID'       },
-                    { key: 'farmer_name',   label: 'Farmer Name'  },
-                    { key: 'district_code', label: 'Dist / Vil'   },
-                    { key: 'risk_score',    label: 'Risk Score'   },
-                    { key: 'flags',         label: 'Anomaly Flags'},
-                    { key: 'status',        label: 'Status'       },
-                    { key: 'submitted_at',  label: 'Submitted'    },
-                    { key: null,            label: 'Adjudication' },
-                  ].map(({ key, label }) => (
-                    <th
-                      key={label}
-                      className={`text-left px-4 py-3.5 ${key ? 'cursor-pointer hover:text-white select-none' : ''}`}
-                      onClick={() => key && handleSort(key)}
-                    >
-                      <span className="flex items-center gap-1">
-                        {label}
-                        {key && <SortIcon col={key} />}
-                      </span>
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800/60">
-                {filtered.map(a => {
-                  const tier = getRiskTier(a.risk_score)
-                  const st = getStatusBadge(a.status)
-                  const flagCount = (a.anomaly_flags || []).length
-                  const hasCritical = (a.anomaly_flags || []).some(f => f.severity === 'High')
-
-                  return (
-                    <tr
-                      key={a.id}
-                      className="hover:bg-gray-850/60 transition-colors group cursor-pointer"
-                      onClick={() => setSelectedApp(a)}
-                    >
-                      {/* App ID */}
-                      <td className="px-4 py-3 font-mono text-gray-300 text-xs font-bold">
-                        APP-{String(a.id).padStart(6, '0')}
-                      </td>
-
-                      {/* Farmer Name + Parcel ID */}
-                      <td className="px-4 py-3">
-                        <div className="text-white font-medium">{a.farmer_name}</div>
-                        <div className="text-[11px] text-gray-500 font-mono truncate max-w-[200px]">
-                          {a.parcel_id}
-                        </div>
-                      </td>
-
-                      {/* District / Village */}
-                      <td className="px-4 py-3 text-gray-400 font-mono text-xs">
-                        <span className="text-white font-semibold">{a.district_code || '—'}</span>
-                        {a.village_code && <span className="text-gray-500"> / {a.village_code}</span>}
-                      </td>
-
-                      {/* Risk Score */}
-                      <td className="px-4 py-3">
-                        {a.risk_score != null ? (
-                          <div className="flex items-center gap-2">
-                            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono font-bold ${tier.color}`}>
-                              <span className={`w-1.5 h-1.5 rounded-full ${tier.dot}`} />
-                              {a.risk_score}/100
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-600 text-xs">—</span>
-                        )}
-                      </td>
-
-                      {/* Triggered Anomaly Flags */}
-                      <td className="px-4 py-3">
-                        {flagCount > 0 ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                              hasCritical
-                                ? 'bg-red-950 text-red-300 border border-red-800/80 font-bold'
-                                : 'bg-yellow-950 text-yellow-300 border border-yellow-800/60'
-                            }`}>
-                              {flagCount} {flagCount === 1 ? 'flag' : 'flags'}
-                            </span>
-                            {hasCritical && (
-                              <span className="text-[10px] text-red-400 font-semibold uppercase">Critical</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-green-400 text-xs flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> Clean
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-4 py-3">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${st.color}`}>
-                          {st.label}
-                        </span>
-                      </td>
-
-                      {/* Submitted At */}
-                      <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
-                        {formatDateTime(a.submitted_at)}
-                      </td>
-
-                      {/* Action buttons */}
-                      <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => setSelectedApp(a)}
-                            className="flex items-center gap-1 bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-800/70 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
-                            title="Open Anomaly Dossier Slide-Over"
-                          >
-                            <ShieldAlert className="w-3.5 h-3.5" /> Dossier
-                          </button>
-                          <Link
-                            to={`/admin/applications/${a.id}`}
-                            className="flex items-center gap-1 bg-gray-800 hover:bg-gray-700 text-gray-300 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors"
-                            title="Full Registry Review"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
         )}
       </div>
 
-      {/* Slide-over Anomaly Dossier Modal (ADM-04) */}
+      {/* Filter Inputs Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-6 gap-3 font-mono text-xs">
+        <div className="sm:col-span-2">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search farmer name, parcel, district..."
+            className="w-full bg-white border border-slate-300 text-slate-900 p-2 text-xs focus:outline-none focus:border-slate-800"
+          />
+        </div>
+        <div>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatus(e.target.value)}
+            className="w-full bg-white border border-slate-300 text-slate-900 p-2 text-xs focus:outline-none focus:border-slate-800"
+          >
+            <option value="">Status (All)</option>
+            {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+        <div>
+          <input
+            type="text"
+            value={districtFilter}
+            onChange={(e) => setDist(e.target.value.toUpperCase())}
+            placeholder="District (e.g. MRT)"
+            className="w-full bg-white border border-slate-300 text-slate-900 p-2 text-xs uppercase focus:outline-none focus:border-slate-800"
+          />
+        </div>
+        <div>
+          <input
+            type="number"
+            value={minRisk}
+            onChange={(e) => setMinRisk(e.target.value)}
+            placeholder="Min Risk (0-100)"
+            className="w-full bg-white border border-slate-300 text-slate-900 p-2 text-xs focus:outline-none focus:border-slate-800"
+          />
+        </div>
+        <div>
+          <input
+            type="number"
+            value={maxRisk}
+            onChange={(e) => setMaxRisk(e.target.value)}
+            placeholder="Max Risk (0-100)"
+            className="w-full bg-white border border-slate-300 text-slate-900 p-2 text-xs focus:outline-none focus:border-slate-800"
+          />
+        </div>
+      </div>
+
+      {/* Applications Table */}
+      {loading ? (
+        <div className="py-20 text-center text-slate-900"><Spinner /></div>
+      ) : filtered.length === 0 ? (
+        <div className="border border-slate-200 p-12 text-center font-mono text-xs text-slate-500 bg-white">
+          [ NO BENEFICIARY DOSSIERS MATCH CURRENT AUDIT FILTERS ]
+        </div>
+      ) : (
+        <div className="border border-slate-300 bg-white overflow-x-auto shadow-sm">
+          <table className="w-full text-left font-mono text-xs">
+            <thead>
+              <tr className="border-b border-slate-300 bg-slate-900 text-white uppercase text-[10px] tracking-wider">
+                <th onClick={() => handleSort('id')} className="py-3 px-3 cursor-pointer hover:text-amber-300 font-semibold">
+                  Dossier ID {sortBy === 'id' && (sortDir === 'asc' ? '↑' : '↓')}
+                </th>
+                <th onClick={() => handleSort('farmer_name')} className="py-3 px-3 cursor-pointer hover:text-amber-300 font-semibold">
+                  Applicant Particulars {sortBy === 'farmer_name' && (sortDir === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="py-3 px-3 font-semibold">Revenue Jurisdiction</th>
+                <th onClick={() => handleSort('risk_score')} className="py-3 px-3 cursor-pointer hover:text-amber-300 font-semibold">
+                  Threat Score {sortBy === 'risk_score' && (sortDir === 'asc' ? '↑' : '↓')}
+                </th>
+                <th className="py-3 px-3 font-semibold">Certainty</th>
+                <th className="py-3 px-3 font-semibold">Signals</th>
+                <th className="py-3 px-3 font-semibold">Statutory Status</th>
+                <th className="py-3 px-3 text-right font-semibold">Adjudication</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 text-slate-900">
+              {filtered.map((a) => {
+                const tier = getRiskTier(a.risk_score)
+                const st = getStatusBadge(a.status)
+                const flagCount = a.anomaly_flags?.length || 0
+
+                return (
+                  <tr key={a.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="py-3 px-3 font-bold whitespace-nowrap text-slate-900">
+                      APP-{String(a.id).padStart(6, '0')}
+                    </td>
+                    <td className="py-3 px-3 font-sans max-w-[180px]">
+                      <div className="font-semibold text-slate-900 truncate">{a.farmer_name}</div>
+                      <span className="block font-mono text-[10px] text-slate-500 truncate">
+                        {a.parcel_id || 'Parcel Unassigned'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap text-slate-600">
+                      <span>{a.district_code || '—'}</span>
+                      <span className="text-slate-400 mx-1">/</span>
+                      <span className="text-slate-500">{a.village_code || '—'}</span>
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      <span className={`stamp text-[11px] ${tier.color}`}>
+                        {a.risk_score != null ? `${a.risk_score} / 100` : '—'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap text-slate-600 text-[11px]">
+                      {a.confidence_score != null ? `${a.confidence_score}%` : '85%'}
+                      <span className="text-slate-400 block text-[10px] uppercase">
+                        {a.confidence_level || 'Medium'}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      {flagCount > 0 ? (
+                        <span className="stamp border border-amber-400 bg-amber-50 text-amber-900 font-bold text-[10px]">
+                          {flagCount} FLAGS
+                        </span>
+                      ) : (
+                        <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-semibold">
+                          0 FLAGS
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3 px-3 whitespace-nowrap">
+                      <span className={`stamp text-[10px] ${st.color}`}>
+                        {st.label}
+                      </span>
+                    </td>
+                    <td className="py-3 px-3 text-right whitespace-nowrap space-x-2">
+                      <button
+                        onClick={() => setSelectedApp(a)}
+                        className="border border-slate-300 hover:border-slate-800 bg-white text-slate-800 px-2 py-1 text-[11px] uppercase tracking-wider font-semibold"
+                      >
+                        Quick Action
+                      </button>
+                      <Link
+                        to={`/admin/applications/${a.id}`}
+                        className="border border-slate-900 bg-slate-900 hover:bg-slate-800 text-white py-1 px-2.5 text-[11px] uppercase tracking-wider font-semibold inline-block"
+                      >
+                        Dossier →
+                      </Link>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Quick Dossier Slide-Over */}
       {selectedApp && (
         <QuickDossierDrawer
           app={selectedApp}
