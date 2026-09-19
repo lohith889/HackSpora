@@ -19,6 +19,7 @@ from app.services import (
     statistical_engine,
     temporal_engine,
     isolation_forest_engine,
+    graph_engine,
 )
 
 ENGINES = [
@@ -30,6 +31,7 @@ ENGINES = [
     ("statistical_engine",     statistical_engine),
     ("temporal_engine",        temporal_engine),
     ("isolation_forest_engine",isolation_forest_engine),
+    ("graph_engine",           graph_engine),
 ]
 
 

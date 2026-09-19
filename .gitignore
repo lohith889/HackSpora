@@ -47,3 +47,10 @@ Desktop.ini
 # Local uploads storage (preserve directory structure but not uploaded user files)
 backend/uploads/*
 !backend/uploads/.gitkeep
+
+# Node dependencies and build artifacts
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
+frontend/build/
