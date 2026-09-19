@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File,
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.models import User, Application
+from app.models import User, Application, AnomalyFlag
 from app.auth import get_current_user
 from app.utils import get_citizen_status_message
 from app.schemas import (
@@ -16,6 +16,7 @@ from app.schemas import (
     AnomalyReportResponse,
 )
 from app.services import application_service
+from app.services.anomaly_pipeline import run_pipeline
 
 application_router = APIRouter(prefix="/applications", tags=["Applications"])
 
@@ -95,6 +96,27 @@ async def submit_pm_kisan_application(
     )
 
     details = application.pm_kisan_details
+
+    # ── Run Anomaly Detection Pipeline (all 7 engines) ──────────────────────
+    if details:
+        try:
+            pipeline_result = run_pipeline(details, db)
+            # Persist each flag as an AnomalyFlag row (raw flags — scoring in Phase 4)
+            for flag in pipeline_result.flags:
+                db_flag = AnomalyFlag(
+                    application_id=application.id,
+                    anomaly_code=flag.anomaly_code,
+                    severity=flag.severity,
+                    score=flag.score,
+                    rationale=flag.rationale,
+                    evidence_json=flag.evidence_json or {},
+                )
+                db.add(db_flag)
+            db.commit()
+        except Exception:
+            # Pipeline errors must never block the citizen's submission response
+            db.rollback()
+
     return ApplicationSubmissionResponse(
         application_id=application.id,
         scheme_code=application.scheme_code,

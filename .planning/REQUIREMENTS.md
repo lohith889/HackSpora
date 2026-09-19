@@ -25,13 +25,13 @@
 - [x] **APP-05**: User receives immediate submission response with application ID, status, and citizen-friendly status message.
 
 ### Anomaly Detection Pipeline
-- [ ] **ENG-01**: Identity Engine evaluates mock e-KYC status, OTP verification, duplicate Aadhaar across accounts, and bulk mobile usage.
-- [ ] **ENG-02**: Land Engine evaluates parcel existence in `land_records_master`, owner Aadhaar match, fuzzy owner name match, non-agricultural land flag, ownership active status, and area discrepancies.
-- [ ] **ENG-03**: Bank Engine evaluates IFSC validity, account active status, mock penny-drop status, bank account holder fuzzy name match, and multi-applicant shared bank accounts.
-- [ ] **ENG-04**: Exclusion Engine matches applicant `aadhaar_ref` against `exclusion_master` for taxpayers, government employees, pensioners, professionals, institutional landholders, and deceased status.
-- [ ] **ENG-05**: Duplicate Parcel Engine detects cross-application multiple claims on identical land parcels and flags syndicate patterns.
-- [ ] **ENG-06**: Statistical & Geographic Engine identifies abnormal application density in villages compared to historical cultivator baselines.
-- [ ] **ENG-07**: Temporal Spike Engine detects abnormal submission surges in districts preceding key scheme milestone dates (installment payouts).
+- [x] **ENG-01**: Identity Engine evaluates mock e-KYC status, OTP verification, duplicate Aadhaar across accounts, and bulk mobile usage.
+- [x] **ENG-02**: Land Engine evaluates parcel existence in `land_records_master`, owner Aadhaar match, fuzzy owner name match, non-agricultural land flag, ownership active status, and area discrepancies.
+- [x] **ENG-03**: Bank Engine evaluates IFSC validity, account active status, mock penny-drop status, bank account holder fuzzy name match, and multi-applicant shared bank accounts.
+- [x] **ENG-04**: Exclusion Engine matches applicant `aadhaar_ref` against `exclusion_master` for taxpayers, government employees, pensioners, professionals, institutional landholders, and deceased status.
+- [x] **ENG-05**: Duplicate Parcel Engine detects cross-application multiple claims on identical land parcels and flags syndicate patterns.
+- [x] **ENG-06**: Statistical & Geographic Engine identifies abnormal application density in villages compared to historical cultivator baselines.
+- [x] **ENG-07**: Temporal Spike Engine detects abnormal submission surges in districts preceding key scheme milestone dates (installment payouts).
 
 ### Risk Scoring, Confidence & Explainability
 - [ ] **RISK-01**: Risk Scorer computes cumulative weighted severity score (capped at 0-100) from all triggered anomaly flags.
