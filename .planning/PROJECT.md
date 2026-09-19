@@ -65,11 +65,16 @@ Deterministic and statistical anomaly detection on agricultural subsidy applicat
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| SQLite for MVP | Zero-configuration local database, fast seeding, self-contained for hackathon demo | — Pending |
-| FastAPI Backend | High performance, automatic OpenAPI documentation, clean async support, type safety with Pydantic | — Pending |
-| Vite + React + Tailwind CSS | Modern, fast development and crisp government-grade UI styling with responsive dashboards | — Pending |
-| Modular Anomaly Engines | Clean separation of concerns; each engine evaluates specific domain rules and returns structured flags + evidence | — Pending |
-| Salted SHA-256 Aadhaar Tokenization | Strict compliance with Indian data protection norms while allowing exact matching for duplicate and exclusion detection | — Pending |
+| SQLite for MVP | Zero-configuration local database, fast seeding, self-contained for hackathon demo | ✓ Good |
+| FastAPI Backend | High performance, automatic OpenAPI documentation, clean async support, type safety with Pydantic | ✓ Good |
+| Vite + React + Tailwind CSS | Modern, fast development and crisp government-grade UI styling with responsive dashboards | ✓ Good |
+| Modular Anomaly Engines | Clean separation of concerns; each engine evaluates specific domain rules and returns structured flags + evidence | ✓ Good |
+| Salted SHA-256 Aadhaar Tokenization | Strict compliance with Indian data protection norms while allowing exact matching for duplicate and exclusion detection | ✓ Good |
+| Synchronous Inline Engine Execution | Run all 7 engines in-request (<200ms) to ensure instant response without polling complexity | ✓ Good |
+| Demo Quick-Fill Presets | Floating toolbar with 1-click test scenarios + auto-attached mock deed PDF for rapid evaluator testing | ✓ Good |
+| Auto-Seed on Startup | Automatically populate master tables and 20 sample applications on startup if database is unseeded | ✓ Good |
+| Indian DPI Theme with EN/HI Toggle | National Informatics Centre (NIC) styling (Navy Blue/Saffron/Green) with English/Hindi toggle | ✓ Good |
+| Unified One-Click Dev Runner | Provide start.ps1 and start.bat to launch backend (8000) and frontend (5173) together | ✓ Good |
 
 ## Evolution
 
