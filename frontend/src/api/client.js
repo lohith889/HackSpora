@@ -38,10 +38,14 @@ export const applicationAPI = {
 export const adminAPI = {
   // List with optional filters
   listApplications: (params = {}) => api.get('/admin/applications', { params }),
+  // Get single application full anomaly dossier
+  getApplicationDetail: (id) => api.get(`/admin/applications/${id}`),
   // Make decision
   decision: (id, payload) => api.post(`/admin/applications/${id}/decision`, payload),
   // Evaluation metrics
   evaluationMetrics: () => api.get('/admin/evaluation/metrics'),
+  // Audit logs
+  getAuditLogs: (params = {}) => api.get('/admin/audit-logs', { params }),
 }
 
 export default api

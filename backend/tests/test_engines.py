@@ -561,13 +561,14 @@ class TestTemporalEngine:
 
 class TestAnomalyPipeline:
     def test_pipeline_runs_all_engines(self):
-        """Pipeline must run all 8 engines and report them in engines_run."""
+        """Pipeline must run all 9 engines and report them in engines_run."""
         db = TestingSessionLocal()
         user = seed_user(db, "pipe1@test.com")
         _, details = seed_application(db, user.id)
         result = run_pipeline(details, db)
-        assert len(result.engines_run) == 8
+        assert len(result.engines_run) == 9
         assert "isolation_forest_engine" in result.engines_run
+        assert "graph_engine" in result.engines_run
         assert result.error_log == []
         db.close()
 

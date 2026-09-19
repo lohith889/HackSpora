@@ -21,6 +21,7 @@ from app.schemas import (
     AdminApplicationDetail,
     AnomalyReportResponse,
     AnomalyFlagResponse,
+    AuditLogResponse,
 )
 from app.services.model_evaluation import evaluate_pipeline_on_synthetic_ground_truth
 
@@ -123,6 +124,7 @@ def get_model_evaluation_metrics(
 def list_applications_for_admin(
     status_filter: Optional[str] = Query(None, alias="status"),
     district: Optional[str] = Query(None),
+    village: Optional[str] = Query(None),
     min_risk: Optional[int] = Query(None),
     max_risk: Optional[int] = Query(None),
     db: Session = Depends(get_db),
@@ -153,6 +155,8 @@ def list_applications_for_admin(
         if not details:
             continue
         if district and details.district_code != district.strip().upper():
+            continue
+        if village and details.village_code != village.strip().upper():
             continue
 
         anomaly_rep = None
@@ -220,3 +224,133 @@ def list_applications_for_admin(
         ))
 
     return results
+
+
+@admin_router.get(
+    "/applications/{application_id}",
+    response_model=AdminApplicationDetail,
+    summary="Get Detailed Anomaly Dossier for Application (Admin Route)",
+)
+def get_admin_application_detail(
+    application_id: int,
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role("ADMIN")),
+):
+    """Retrieve full anomaly dossier for a specific application."""
+    app = (
+        db.query(Application)
+        .options(
+            joinedload(Application.pm_kisan_details),
+            joinedload(Application.anomaly_report),
+            joinedload(Application.anomaly_flags),
+        )
+        .filter(Application.id == application_id)
+        .first()
+    )
+    if not app:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Application with ID {application_id} not found.",
+        )
+    details = app.pm_kisan_details
+    if not details:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Application details are missing or corrupted.",
+        )
+
+    anomaly_rep = None
+    if app.anomaly_report:
+        anomaly_rep = AnomalyReportResponse(
+            risk_score=app.anomaly_report.risk_score,
+            confidence_score=app.anomaly_report.confidence_score or 85,
+            confidence_level=app.anomaly_report.confidence_level,
+            recommended_action=app.anomaly_report.recommended_action,
+            rationale=app.anomaly_report.rationale,
+        )
+
+    flags = [
+        AnomalyFlagResponse(
+            anomaly_code=f.anomaly_code,
+            severity=f.severity,
+            score=f.score,
+            rationale=f.rationale,
+            evidence_json=f.evidence_json,
+        )
+        for f in (app.anomaly_flags or [])
+    ]
+
+    return AdminApplicationDetail(
+        id=app.id,
+        user_id=app.user_id,
+        scheme_code=app.scheme_code,
+        status=app.status,
+        risk_score=app.risk_score,
+        confidence_score=app.confidence_score,
+        confidence_level=app.confidence_level,
+        recommended_action=app.recommended_action,
+        officer_decision=app.officer_decision,
+        officer_remarks=app.officer_remarks,
+        officer_decided_at=app.officer_decided_at,
+        submitted_at=app.submitted_at,
+        created_at=app.created_at,
+        farmer_name=details.farmer_name,
+        date_of_birth=details.date_of_birth,
+        gender=details.gender,
+        category=details.category,
+        mobile_number=details.mobile_number,
+        otp_verified=details.otp_verified,
+        aadhaar_ref=details.aadhaar_ref,
+        aadhaar_masked=details.aadhaar_masked,
+        bank_account_number=details.bank_account_number,
+        ifsc_code=details.ifsc_code,
+        bank_account_ifsc_key=details.bank_account_ifsc_key,
+        state_code=details.state_code,
+        district_code=details.district_code,
+        tehsil_code=details.tehsil_code,
+        village_code=details.village_code,
+        khata_number=details.khata_number,
+        plot_number=details.plot_number,
+        declared_land_area_ha=details.declared_land_area_ha,
+        ownership_type=details.ownership_type,
+        declared_crop_code=details.declared_crop_code,
+        land_document_path=details.land_document_path,
+        self_declaration=details.self_declaration,
+        e_kyc_consent=details.e_kyc_consent,
+        e_kyc_status=details.e_kyc_status,
+        parcel_id=details.parcel_id,
+        anomaly_report=anomaly_rep,
+        anomaly_flags=flags,
+    )
+
+
+@admin_router.get(
+    "/audit-logs",
+    response_model=List[AuditLogResponse],
+    summary="List Immutable Audit Logs for Officer Adjudication Actions",
+)
+def get_audit_logs(
+    application_id: Optional[int] = Query(None),
+    limit: int = Query(100, ge=1, le=500),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role("ADMIN")),
+):
+    """Retrieve immutable audit logs recorded for scheme officer adjudication actions."""
+    query = db.query(AuditLog).options(joinedload(AuditLog.admin))
+    if application_id is not None:
+        query = query.filter(AuditLog.application_id == application_id)
+    logs = query.order_by(AuditLog.created_at.desc()).limit(limit).all()
+
+    return [
+        AuditLogResponse(
+            id=log.id,
+            application_id=log.application_id,
+            admin_id=log.admin_id,
+            admin_name=log.admin.full_name or log.admin.email if log.admin else f"Officer #{log.admin_id}",
+            action=log.action,
+            remarks=log.remarks,
+            created_at=log.created_at,
+        )
+        for log in logs
+    ]
+

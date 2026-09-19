@@ -236,3 +236,16 @@ class EvaluationMetricsResponse(BaseModel):
     specificity: float
     false_positive_rate: float
     evaluation_timestamp: datetime.datetime
+
+
+class AuditLogResponse(BaseModel):
+    id: int
+    application_id: int
+    admin_id: int
+    admin_name: Optional[str] = None
+    action: str
+    remarks: Optional[str] = None
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+

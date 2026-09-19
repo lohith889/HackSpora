@@ -56,10 +56,10 @@
 - [x] **ADM-06**: Admin actions are immutably logged to `audit_logs` table, and filtered applications can be exported to CSV.
 
 ### Seed Dataset & Demo Verification
-- [ ] **SEED-01**: Seeder script provisions admin user (`admin@pmkisan.gov.in`) and farmer user (`farmer@test.com`).
-- [ ] **SEED-02**: Seeder provisions 20+ master records for land, bank validation, exclusion registries, village profiles, and calendar events.
-- [ ] **SEED-03**: Seeder provisions 20 sample applications covering all risk tiers (10 Low Risk, 5 Medium Risk, 5 High Risk) and executes the anomaly pipeline on all.
-- [ ] **SEED-04**: End-to-end verification script or demo flow validates both farmer submission and admin review workflows.
+- [x] **SEED-01**: Seeder script provisions admin user (`admin@pmkisan.gov.in`) and farmer user (`farmer@test.com`).
+- [x] **SEED-02**: Seeder provisions 20+ master records for land, bank validation, exclusion registries, village profiles, and calendar events.
+- [x] **SEED-03**: Seeder provisions 20 sample applications covering all risk tiers (10 Low Risk, 5 Medium Risk, 5 High Risk) and executes the anomaly pipeline on all.
+- [x] **SEED-04**: End-to-end verification script or demo flow validates both farmer submission and admin review workflows.
 
 ## v2 Requirements
 
@@ -84,39 +84,39 @@
 | AUTH-02 | Phase 1 | Complete |
 | AUTH-03 | Phase 1 | Complete |
 | AUTH-04 | Phase 1 | Complete |
-| SCHM-01 | Phase 2 | Pending |
-| SCHM-02 | Phase 2 | Pending |
-| SCHM-03 | Phase 2 | Pending |
-| SCHM-04 | Phase 2 | Pending |
-| APP-01 | Phase 2 | Pending |
-| APP-02 | Phase 2 | Pending |
-| APP-03 | Phase 2 | Pending |
-| APP-04 | Phase 2 | Pending |
-| APP-05 | Phase 2 | Pending |
-| ENG-01 | Phase 3 | Pending |
-| ENG-02 | Phase 3 | Pending |
-| ENG-03 | Phase 3 | Pending |
-| ENG-04 | Phase 3 | Pending |
-| ENG-05 | Phase 3 | Pending |
-| ENG-06 | Phase 3 | Pending |
-| ENG-07 | Phase 3 | Pending |
-| RISK-01 | Phase 4 | Pending |
-| RISK-02 | Phase 4 | Pending |
-| RISK-03 | Phase 4 | Pending |
-| RISK-04 | Phase 4 | Pending |
-| FARM-01 | Phase 5 | Pending |
-| FARM-02 | Phase 5 | Pending |
-| FARM-03 | Phase 5 | Pending |
-| ADM-01 | Phase 6 | Pending |
-| ADM-02 | Phase 6 | Pending |
-| ADM-03 | Phase 6 | Pending |
-| ADM-04 | Phase 6 | Pending |
-| ADM-05 | Phase 6 | Pending |
-| ADM-06 | Phase 6 | Pending |
-| SEED-01 | Phase 7 | Pending |
-| SEED-02 | Phase 7 | Pending |
-| SEED-03 | Phase 7 | Pending |
-| SEED-04 | Phase 7 | Pending |
+| SCHM-01 | Phase 2 | Complete |
+| SCHM-02 | Phase 2 | Complete |
+| SCHM-03 | Phase 2 | Complete |
+| SCHM-04 | Phase 2 | Complete |
+| APP-01 | Phase 2 | Complete |
+| APP-02 | Phase 2 | Complete |
+| APP-03 | Phase 2 | Complete |
+| APP-04 | Phase 2 | Complete |
+| APP-05 | Phase 2 | Complete |
+| ENG-01 | Phase 3 | Complete |
+| ENG-02 | Phase 3 | Complete |
+| ENG-03 | Phase 3 | Complete |
+| ENG-04 | Phase 3 | Complete |
+| ENG-05 | Phase 3 | Complete |
+| ENG-06 | Phase 3 | Complete |
+| ENG-07 | Phase 3 | Complete |
+| RISK-01 | Phase 4 | Complete |
+| RISK-02 | Phase 4 | Complete |
+| RISK-03 | Phase 4 | Complete |
+| RISK-04 | Phase 4 | Complete |
+| FARM-01 | Phase 5 | Complete |
+| FARM-02 | Phase 5 | Complete |
+| FARM-03 | Phase 5 | Complete |
+| ADM-01 | Phase 6 | Complete |
+| ADM-02 | Phase 6 | Complete |
+| ADM-03 | Phase 6 | Complete |
+| ADM-04 | Phase 6 | Complete |
+| ADM-05 | Phase 6 | Complete |
+| ADM-06 | Phase 6 | Complete |
+| SEED-01 | Phase 7 | Complete |
+| SEED-02 | Phase 7 | Complete |
+| SEED-03 | Phase 7 | Complete |
+| SEED-04 | Phase 7 | Complete |
 
 **Coverage:**
 - v1 requirements: 34 total

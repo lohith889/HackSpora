@@ -10,10 +10,18 @@ import AdminLayout from './components/AdminLayout'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import AdminApplicationsPage from './pages/admin/AdminApplicationsPage'
 import AdminApplicationDetailPage from './pages/admin/AdminApplicationDetailPage'
+import AdminAuditLogsPage from './pages/admin/AdminAuditLogsPage'
+import AdminBenchmarkPage from './pages/admin/AdminBenchmarkPage'
 
-function PrivateRoute({ children }) {
+function FarmerRoute({ children }) {
   const { user } = useAuth()
-  return user ? children : <Navigate to="/login" replace />
+  if (!user) return <Navigate to="/login" replace />
+  // If admin visits citizen route without explicit preview flag, redirect to admin console
+  const isPreview = window.location.search.includes('preview=citizen')
+  if (user.role === 'ADMIN' && !isPreview) {
+    return <Navigate to="/admin" replace />
+  }
+  return children
 }
 
 function AdminRoute({ children }) {
@@ -28,25 +36,34 @@ function PublicRoute({ children }) {
   return !user ? children : <Navigate to={user?.role === 'ADMIN' ? '/admin' : '/dashboard'} replace />
 }
 
+function RootRedirect() {
+  const { user } = useAuth()
+  if (!user) return <Navigate to="/login" replace />
+  return <Navigate to={user.role === 'ADMIN' ? '/admin' : '/dashboard'} replace />
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/" element={<RootRedirect />} />
 
       <Route path="/login"    element={<PublicRoute><LoginPage /></PublicRoute>} />
       <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
 
-      {/* Farmer routes */}
-      <Route path="/dashboard"         element={<PrivateRoute><Layout><DashboardPage /></Layout></PrivateRoute>} />
-      <Route path="/apply"             element={<PrivateRoute><Layout><ApplicationFormPage /></Layout></PrivateRoute>} />
-      <Route path="/applications/:id"  element={<PrivateRoute><Layout><ApplicationDetailPage /></Layout></PrivateRoute>} />
+      {/* Farmer citizen routes */}
+      <Route path="/dashboard"         element={<FarmerRoute><Layout><DashboardPage /></Layout></FarmerRoute>} />
+      <Route path="/apply"             element={<FarmerRoute><Layout><ApplicationFormPage /></Layout></FarmerRoute>} />
+      <Route path="/applications/:id"  element={<FarmerRoute><Layout><ApplicationDetailPage /></Layout></FarmerRoute>} />
 
-      {/* Admin routes */}
+      {/* Admin Officer routes */}
       <Route path="/admin"                      element={<AdminRoute><AdminLayout><AdminDashboardPage /></AdminLayout></AdminRoute>} />
       <Route path="/admin/applications"         element={<AdminRoute><AdminLayout><AdminApplicationsPage /></AdminLayout></AdminRoute>} />
       <Route path="/admin/applications/:id"     element={<AdminRoute><AdminLayout><AdminApplicationDetailPage /></AdminLayout></AdminRoute>} />
+      <Route path="/admin/audit-logs"           element={<AdminRoute><AdminLayout><AdminAuditLogsPage /></AdminLayout></AdminRoute>} />
+      <Route path="/admin/benchmark"            element={<AdminRoute><AdminLayout><AdminBenchmarkPage /></AdminLayout></AdminRoute>} />
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      {/* Fallback */}
+      <Route path="*" element={<RootRedirect />} />
     </Routes>
   )
 }

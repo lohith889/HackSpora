@@ -1,6 +1,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Leaf, LayoutDashboard, FilePlus, LogOut, User } from 'lucide-react'
+import { Leaf, LayoutDashboard, FilePlus, LogOut, User, ShieldAlert } from 'lucide-react'
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth()
@@ -24,6 +24,19 @@ export default function Layout({ children }) {
         <span>Government of India | Ministry of Agriculture &amp; Farmers Welfare</span>
         <span className="hidden sm:block">Digital India • Kisan Kalyan</span>
       </div>
+
+      {/* Admin Officer Notification Banner */}
+      {user?.role === 'ADMIN' && (
+        <div className="bg-red-950 text-red-200 border-b border-red-800 py-1.5 px-4 text-xs flex items-center justify-between">
+          <span className="flex items-center gap-1.5 font-medium">
+            <ShieldAlert className="w-4 h-4 text-red-400" />
+            Active Role: Scheme Verification Officer (Previewing Citizen View)
+          </span>
+          <Link to="/admin" className="bg-red-800 hover:bg-red-700 text-white px-2.5 py-0.5 rounded text-xs font-semibold transition-colors">
+            Go to Admin Review Console →
+          </Link>
+        </div>
+      )}
 
       {/* Main Header */}
       <header className="bg-gov-blue shadow-md">
@@ -58,6 +71,15 @@ export default function Layout({ children }) {
 
           {/* User menu */}
           <div className="flex items-center gap-3">
+            {user?.role === 'ADMIN' && (
+              <Link
+                to="/admin"
+                className="hidden sm:flex items-center gap-1.5 bg-red-700 hover:bg-red-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold shadow transition-colors"
+              >
+                <ShieldAlert className="w-3.5 h-3.5" />
+                Officer Console
+              </Link>
+            )}
             <div className="hidden sm:flex items-center gap-2 text-blue-100 text-sm">
               <User className="w-4 h-4" />
               <span className="max-w-[140px] truncate">{user?.full_name || user?.email}</span>
