@@ -6,10 +6,10 @@
 ## v1 Requirements
 
 ### Authentication & Authorization
-- [ ] **AUTH-01**: User can register with email, mobile, password, name, DOB, gender, and category with bcrypt password hashing.
-- [ ] **AUTH-02**: User and Admin can log in using email/password and receive JWT tokens with role claims (`USER` or `ADMIN`).
-- [ ] **AUTH-03**: Backend authenticates protected routes via JWT Bearer authentication and enforces role-based access control.
-- [ ] **AUTH-04**: Session state persists across browser reloads via token storage in frontend client.
+- [x] **AUTH-01**: User can register with email, mobile, password, name, DOB, gender, and category with bcrypt password hashing.
+- [x] **AUTH-02**: User and Admin can log in using email/password and receive JWT tokens with role claims (`USER` or `ADMIN`).
+- [x] **AUTH-03**: Backend authenticates protected routes via JWT Bearer authentication and enforces role-based access control.
+- [x] **AUTH-04**: Session state persists across browser reloads via token storage in frontend client.
 
 ### Scheme Definition & Application Form
 - [ ] **SCHM-01**: User can fetch active scheme metadata and required fields via `/api/schemes/PM_KISAN/fields`.
@@ -77,10 +77,10 @@
 
 | Requirement | Phase | Status |
 |---|---|---|
-| AUTH-01 | Phase 1 | Pending |
-| AUTH-02 | Phase 1 | Pending |
-| AUTH-03 | Phase 1 | Pending |
-| AUTH-04 | Phase 1 | Pending |
+| AUTH-01 | Phase 1 | Complete |
+| AUTH-02 | Phase 1 | Complete |
+| AUTH-03 | Phase 1 | Complete |
+| AUTH-04 | Phase 1 | Complete |
 | SCHM-01 | Phase 2 | Pending |
 | SCHM-02 | Phase 2 | Pending |
 | SCHM-03 | Phase 2 | Pending |
