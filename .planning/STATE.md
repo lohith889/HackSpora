@@ -6,13 +6,13 @@ See: `.planning/PROJECT.md` (updated 2026-09-19)
 
 **Core value:** Deterministic and statistical anomaly detection on agricultural subsidy applications that reliably flags fraudulent claims with high confidence and explainable rationale while keeping internal fraud scoring invisible to applicants.  
 **Current focus:** Phase 1: Foundation & Authentication  
-**Status:** Initialized — Ready for Phase 1 Planning
+**Status:** Planned (2 plans ready for execution)
 
 ## Progress
 
 - **Phases:** 0 of 7 completed
 - **v1 Requirements:** 0 of 34 verified
-- **Current Phase:** Phase 1 (Foundation & Authentication)
+- **Current Phase:** Phase 1 (Foundation & Authentication — 2 plans ready)
 
 ## Phase Breakdown
 
