@@ -109,17 +109,17 @@ export default function SyndicateGraphPanel({ applicationId = 1, onOpenApplicati
   const layout = useMemo(() => {
     if (!data?.nodes) return { nodes: [], links: [] }
 
-    const width = 760
-    const height = 360
+    const width = 860
+    const height = 480
 
     if (data.mode === 'demo_family') {
       // 3 applications on top row, 2 shared resources on bottom row
       const posMap = {
-        app_f1: { x: 180, y: 100 },
-        app_f2: { x: 380, y: 100 },
-        app_f3: { x: 580, y: 100 },
-        res_f_parcel: { x: 280, y: 260 },
-        res_f_mob: { x: 480, y: 260 },
+        app_f1: { x: 200, y: 130 },
+        app_f2: { x: 430, y: 130 },
+        app_f3: { x: 660, y: 130 },
+        res_f_parcel: { x: 315, y: 320 },
+        res_f_mob: { x: 545, y: 320 },
       }
       return {
         nodes: data.nodes.map((n) => ({
@@ -132,18 +132,18 @@ export default function SyndicateGraphPanel({ applicationId = 1, onOpenApplicati
 
     // Default 5-App Ring Layout
     const posMap = {
-      app_1: { x: 150, y: 160 },
-      res_bank_1: { x: 290, y: 100 },
-      app_2: { x: 440, y: 90 },
-      res_doc_1: { x: 600, y: 100 },
-      app_4: { x: 630, y: 240 },
-      res_parcel_1: { x: 440, y: 260 },
-      app_3: { x: 300, y: 280 },
-      res_mob_1: { x: 160, y: 300 },
-      app_5: { x: 90, y: 230 },
+      app_1: { x: 180, y: 180 },
+      res_bank_1: { x: 340, y: 120 },
+      app_2: { x: 500, y: 110 },
+      res_doc_1: { x: 680, y: 130 },
+      app_4: { x: 720, y: 300 },
+      res_parcel_1: { x: 500, y: 340 },
+      app_3: { x: 340, y: 360 },
+      res_mob_1: { x: 180, y: 360 },
+      app_5: { x: 110, y: 280 },
     }
 
-    // Dynamic Live Layout: Center the focus target application
+    // Dynamic Live Layout: Center the focus target application with staggered anti-collision orbits
     if (data.mode === 'live') {
       const centerX = width / 2
       const centerY = height / 2
@@ -161,12 +161,13 @@ export default function SyndicateGraphPanel({ applicationId = 1, onOpenApplicati
         })
       }
 
-      // Distribute resources in inner ring around target
+      // Distribute resources in two staggered concentric orbits around the target
       const resCount = resources.length
       resources.forEach((r, idx) => {
+        const isStaggered = idx % 2 === 1
         const angle = (idx / Math.max(resCount, 1)) * 2 * Math.PI - Math.PI / 2
-        const rx = resCount <= 3 ? 120 : 135
-        const ry = resCount <= 3 ? 85 : 95
+        const rx = isStaggered ? 175 : 130
+        const ry = isStaggered ? 140 : 105
         computedNodes.push({
           ...r,
           x: Math.round(centerX + rx * Math.cos(angle)),
@@ -174,16 +175,43 @@ export default function SyndicateGraphPanel({ applicationId = 1, onOpenApplicati
         })
       })
 
-      // Distribute other co-claimants on outer ring
+      // Distribute other co-claimants along an outer generous perimeter
       const otherCount = otherApps.length
       otherApps.forEach((app, idx) => {
         const angle = (idx / Math.max(otherCount, 1)) * 2 * Math.PI + Math.PI / 4
         computedNodes.push({
           ...app,
-          x: Math.round(centerX + 250 * Math.cos(angle)),
-          y: Math.round(centerY + 135 * Math.sin(angle)),
+          x: Math.round(centerX + 320 * Math.cos(angle)),
+          y: Math.round(centerY + 185 * Math.sin(angle)),
         })
       })
+
+      // Collision avoidance relaxation iterations: ensure minimum distance between all nodes
+      const minDistance = 68
+      for (let iter = 0; iter < 45; iter++) {
+        for (let i = 0; i < computedNodes.length; i++) {
+          for (let j = i + 1; j < computedNodes.length; j++) {
+            const a = computedNodes[i]
+            const b = computedNodes[j]
+            const dx = b.x - a.x
+            const dy = b.y - a.y
+            const dist = Math.sqrt(dx * dx + dy * dy) || 1
+            if (dist < minDistance) {
+              const overlap = (minDistance - dist) / 2
+              const pushX = (dx / dist) * overlap
+              const pushY = (dy / dist) * overlap
+              if (!a.is_target) {
+                a.x = Math.max(55, Math.min(width - 55, a.x - pushX))
+                a.y = Math.max(45, Math.min(height - 45, a.y - pushY))
+              }
+              if (!b.is_target) {
+                b.x = Math.max(55, Math.min(width - 55, b.x + pushX))
+                b.y = Math.max(45, Math.min(height - 45, b.y + pushY))
+              }
+            }
+          }
+        }
+      }
 
       return {
         nodes: computedNodes,
@@ -191,14 +219,14 @@ export default function SyndicateGraphPanel({ applicationId = 1, onOpenApplicati
       }
     }
 
-    // Fallback circular layout
+    // Fallback circular layout with anti-collision
     const nodeCount = data.nodes.length
     const computedNodes = data.nodes.map((n, idx) => {
       if (posMap[n.id]) {
         return { ...n, ...posMap[n.id] }
       }
       const angle = (idx / Math.max(nodeCount, 1)) * 2 * Math.PI - Math.PI / 2
-      const radius = n.type === 'application' ? 140 : 80
+      const radius = n.type === 'application' ? 180 : 110
       return {
         ...n,
         x: Math.round(width / 2 + radius * Math.cos(angle)),
@@ -508,11 +536,11 @@ export default function SyndicateGraphPanel({ applicationId = 1, onOpenApplicati
           )}
 
           {/* SVG Canvas Container */}
-          <div className="relative border border-slate-300 bg-white overflow-hidden">
+          <div className="relative border border-slate-200/90 rounded-2xl bg-white overflow-hidden shadow-xs">
             <svg
-              viewBox="0 0 760 360"
+              viewBox="0 0 860 480"
               className="w-full h-auto select-none"
-              style={{ minHeight: '340px' }}
+              style={{ minHeight: '420px' }}
             >
               <defs>
                 {/* Glow filter for highlighted edges */}
@@ -630,14 +658,25 @@ export default function SyndicateGraphPanel({ applicationId = 1, onOpenApplicati
                       >
                         [{node.badge}]
                       </text>
-                      {/* Sub-label text below node */}
+                      {/* Sub-label background pill & text below node */}
+                      <rect
+                        x="-38"
+                        y={half + 3}
+                        width="76"
+                        height="16"
+                        rx="4"
+                        fill="#ffffff"
+                        fillOpacity="0.92"
+                        stroke="#e2e8f0"
+                        strokeWidth="0.8"
+                      />
                       <text
                         x="0"
-                        y={half + 13}
+                        y={half + 14}
                         textAnchor="middle"
-                        fill="#374151"
+                        fill="#334155"
                         fontSize="10"
-                        fontWeight="500"
+                        fontWeight="600"
                       >
                         {node.label}
                       </text>
