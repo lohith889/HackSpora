@@ -16,6 +16,7 @@ from app.utils import (
     validate_ifsc_format,
     validate_mock_otp,
 )
+from app.services.land_ocr_service import process_uploaded_land_document
 
 ALLOWED_EXTENSIONS = {".pdf", ".jpg", ".jpeg", ".png"}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
@@ -162,6 +163,16 @@ async def create_pm_kisan_application(
         ifsc_code=ifsc_code,
     )
 
+    # 8b. Automated Land Document OCR & Verification (Phase 9)
+    actual_doc_file = os.path.join(settings.UPLOAD_DIR, os.path.basename(document_path))
+    ocr_result = process_uploaded_land_document(
+        file_path=actual_doc_file,
+        declared_parcel_id=parcel_id,
+        declared_khata=khata_number,
+        declared_plot=plot_number,
+        declared_name=farmer_name,
+    )
+
     # 9. Create Application record
     now = datetime.datetime.utcnow()
     application = Application(
@@ -202,6 +213,11 @@ async def create_pm_kisan_application(
         e_kyc_status=True,
         parcel_id=parcel_id,
         bank_account_ifsc_key=bank_account_ifsc_key,
+        ocr_extracted_doc_id=ocr_result.get("ocr_extracted_doc_id"),
+        ocr_status=ocr_result.get("ocr_status", "PENDING"),
+        ocr_match_status=ocr_result.get("ocr_match_status", "UNVERIFIED"),
+        ocr_confidence_score=ocr_result.get("ocr_confidence_score", 0.0),
+        ocr_extracted_data=ocr_result.get("ocr_extracted_data"),
     )
     db.add(pm_kisan_details)
     db.commit()

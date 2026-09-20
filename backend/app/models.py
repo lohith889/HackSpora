@@ -80,6 +80,11 @@ class PMKisanApplicationDetails(Base):
     e_kyc_status = Column(Boolean, default=False, nullable=False)
     parcel_id = Column(String(150), index=True, nullable=False)          # Derived: S-D-T-V-K-P
     bank_account_ifsc_key = Column(String(100), index=True, nullable=False)  # Derived: Acc-IFSC
+    ocr_extracted_doc_id = Column(String(150), nullable=True)             # OCR extracted Doc / Deed / Parcel ID
+    ocr_status = Column(String(50), default="PENDING", nullable=False)    # SUCCESS, PARTIAL, FAILED, UNREADABLE
+    ocr_match_status = Column(String(50), default="UNVERIFIED", nullable=False)  # MATCHED, MISMATCH, UNVERIFIED
+    ocr_confidence_score = Column(Float, default=0.0, nullable=False)     # Evidential certainty (0.0 to 1.0)
+    ocr_extracted_data = Column(JSON, nullable=True)                      # Structured parsed entities
 
     application = relationship("Application", back_populates="pm_kisan_details")
 

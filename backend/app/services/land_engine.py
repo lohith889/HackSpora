@@ -177,4 +177,38 @@ def run(details: PMKisanApplicationDetails, db: Session) -> List[AnomalyFlagResu
                 },
             ))
 
+    # 7. Land Document OCR ID mismatch check
+    if getattr(details, "ocr_match_status", None) == "MISMATCH":
+        flags.append(AnomalyFlagResult(
+            anomaly_code="LAND_DOC_ID_MISMATCH",
+            severity="High",
+            score=40,
+            rationale=(
+                f"Uploaded land deed document ID '{details.ocr_extracted_doc_id or 'Unknown'}' contradicts "
+                f"the declared parcel '{details.parcel_id}'. Possible forged, recycled, or mismatched deed attached."
+            ),
+            evidence_json={
+                "declared_parcel_id": details.parcel_id,
+                "ocr_extracted_doc_id": details.ocr_extracted_doc_id,
+                "ocr_confidence_score": getattr(details, "ocr_confidence_score", 0.0),
+                "ocr_match_status": details.ocr_match_status,
+            },
+        ))
+
+    # 8. Land Document OCR unreadable / illegible check
+    if getattr(details, "ocr_status", None) == "UNREADABLE":
+        flags.append(AnomalyFlagResult(
+            anomaly_code="LAND_DOC_OCR_UNREADABLE",
+            severity="Medium",
+            score=20,
+            rationale=(
+                f"Uploaded land deed document is unreadable, blank, or corrupted. Automated OCR "
+                f"could not verify parcel title authenticity. Officer manual document scrutiny required."
+            ),
+            evidence_json={
+                "ocr_status": details.ocr_status,
+                "ocr_confidence_score": getattr(details, "ocr_confidence_score", 0.0),
+            },
+        ))
+
     return flags

@@ -220,6 +220,11 @@ class AdminApplicationDetail(BaseModel):
     e_kyc_consent: bool
     e_kyc_status: bool
     parcel_id: str
+    ocr_extracted_doc_id: Optional[str] = None
+    ocr_status: Optional[str] = "PENDING"
+    ocr_match_status: Optional[str] = "UNVERIFIED"
+    ocr_confidence_score: Optional[float] = 0.0
+    ocr_extracted_data: Optional[Dict[str, Any]] = None
 
     # Anomaly Dossier
     anomaly_report: Optional[AnomalyReportResponse] = None
