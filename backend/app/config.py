@@ -3,6 +3,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import Optional
 
 
+BACKEND_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_DB_PATH = os.path.join(BACKEND_DIR, "kisan_guard.db").replace("\\", "/")
+
+
 class Settings(BaseSettings):
     PROJECT_NAME: str = "KisanGuard Portal"
     API_V1_STR: str = "/api"
@@ -10,8 +14,8 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
     AADHAAR_SALT: str = "kisanguard_aadhaar_salt_secret_2026"
-    DATABASE_URL: str = "sqlite:///./kisan_guard.db"
-    UPLOAD_DIR: str = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+    DATABASE_URL: str = f"sqlite:///{DEFAULT_DB_PATH}"
+    UPLOAD_DIR: str = os.path.join(BACKEND_DIR, "uploads")
     MOCK_OTP: str = "123456"
 
     model_config = SettingsConfigDict(case_sensitive=True, env_file=".env", extra="ignore")

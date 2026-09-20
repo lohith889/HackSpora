@@ -246,6 +246,11 @@ def list_applications_for_admin(
             e_kyc_consent=details.e_kyc_consent,
             e_kyc_status=details.e_kyc_status,
             parcel_id=details.parcel_id,
+            ocr_extracted_doc_id=details.ocr_extracted_doc_id,
+            ocr_status=details.ocr_status,
+            ocr_match_status=details.ocr_match_status,
+            ocr_confidence_score=details.ocr_confidence_score,
+            ocr_extracted_data=details.ocr_extracted_data,
             anomaly_report=anomaly_rep,
             anomaly_flags=flags,
         ))
@@ -392,13 +397,18 @@ def get_admin_application_detail(
         )
 
     anomaly_rep = None
-    if app.anomaly_report:
+    r = app.anomaly_report
+    if r:
         anomaly_rep = AnomalyReportResponse(
-            risk_score=app.anomaly_report.risk_score,
-            confidence_score=app.anomaly_report.confidence_score or 85,
-            confidence_level=app.anomaly_report.confidence_level,
-            recommended_action=app.anomaly_report.recommended_action,
-            rationale=app.anomaly_report.rationale,
+            risk_score=r.risk_score,
+            confidence_score=r.confidence_score or 85,
+            confidence_level=r.confidence_level,
+            recommended_action=r.recommended_action,
+            rationale=r.rationale,
+            ml_risk_score=r.ml_risk_score,
+            is_statutory_override=r.is_statutory_override,
+            divergence_score=r.divergence_score,
+            ml_shap_drivers=r.ml_shap_drivers,
         )
 
     flags = [
@@ -418,6 +428,9 @@ def get_admin_application_detail(
         scheme_code=app.scheme_code,
         status=app.status,
         risk_score=app.risk_score,
+        ml_risk_score=r.ml_risk_score if r else None,
+        is_statutory_override=r.is_statutory_override if r else False,
+        divergence_score=r.divergence_score if r else 0,
         confidence_score=app.confidence_score,
         confidence_level=app.confidence_level,
         recommended_action=app.recommended_action,
@@ -451,6 +464,11 @@ def get_admin_application_detail(
         e_kyc_consent=details.e_kyc_consent,
         e_kyc_status=details.e_kyc_status,
         parcel_id=details.parcel_id,
+        ocr_extracted_doc_id=details.ocr_extracted_doc_id,
+        ocr_status=details.ocr_status,
+        ocr_match_status=details.ocr_match_status,
+        ocr_confidence_score=details.ocr_confidence_score,
+        ocr_extracted_data=details.ocr_extracted_data,
         anomaly_report=anomaly_rep,
         anomaly_flags=flags,
     )
