@@ -24,7 +24,7 @@ export default function AdminApplicationDetailPage() {
   const [auditLogs, setAuditLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [showGraph, setShowGraph] = useState(false)
+  const [showGraph, setShowGraph] = useState(true)
   const [showRawOcrText, setShowRawOcrText] = useState(false)
 
   // Decision state
