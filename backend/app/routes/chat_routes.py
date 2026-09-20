@@ -15,14 +15,41 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List, Dict, Any
 
-# RAG pipeline imports (resolved via sys.path above)
-from index import initialize_knowledge_base
-from embeddings.embedding_model import load_embedding_model
-from retriever.hybrid_retriever import load_hybrid_retriever
-from llm.llm import load_llm
-from rag.rag_chain import ask_question, clean_model_output
-from retriever.reranker import CrossEncoderReranker
-from utils.greetings import is_greeting, greeting_response
+# RAG pipeline lazy imports (resolved via sys.path above)
+initialize_knowledge_base = None
+load_embedding_model = None
+load_hybrid_retriever = None
+load_llm = None
+ask_question = None
+clean_model_output = None
+CrossEncoderReranker = None
+is_greeting = None
+greeting_response = None
+
+def _ensure_rag_modules():
+    global initialize_knowledge_base, load_embedding_model, load_hybrid_retriever
+    global load_llm, ask_question, clean_model_output, CrossEncoderReranker
+    global is_greeting, greeting_response
+    if ask_question is None:
+        try:
+            from index import initialize_knowledge_base as _ikb
+            from embeddings.embedding_model import load_embedding_model as _lem
+            from retriever.hybrid_retriever import load_hybrid_retriever as _lhr
+            from llm.llm import load_llm as _lll
+            from rag.rag_chain import ask_question as _aq, clean_model_output as _cmo
+            from retriever.reranker import CrossEncoderReranker as _cer
+            from utils.greetings import is_greeting as _ig, greeting_response as _gr
+            initialize_knowledge_base = _ikb
+            load_embedding_model = _lem
+            load_hybrid_retriever = _lhr
+            load_llm = _lll
+            ask_question = _aq
+            clean_model_output = _cmo
+            CrossEncoderReranker = _cer
+            is_greeting = _ig
+            greeting_response = _gr
+        except ImportError as e:
+            raise RuntimeError(f"RAG Chatbot dependencies not installed: {e}")
 
 chat_router = APIRouter()
 
@@ -37,6 +64,7 @@ def _get_models():
     """Return (retriever, llm, reranker), initialising on first call."""
     global _models
     if _models is None:
+        _ensure_rag_modules()
         print("⏳ Initialising RAG knowledge base (first request)...")
         initialize_knowledge_base()
         embedding_model = load_embedding_model()

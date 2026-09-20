@@ -13,6 +13,24 @@ import shap
 from typing import Dict, List, Tuple, Any, Optional
 from sqlalchemy.orm import Session
 
+# ── XGBoost / SHAP compatibility patch for base_score bracket formatting ──
+try:
+    import shap.explainers._tree as _shap_tree
+    _orig_decode = _shap_tree.decode_ubjson_buffer
+
+    def _patched_decode_ubjson_buffer(*args, **kwargs):
+        res = _orig_decode(*args, **kwargs)
+        if isinstance(res, dict) and "learner" in res:
+            lmp = res.get("learner", {}).get("learner_model_param", {})
+            if "base_score" in lmp and isinstance(lmp["base_score"], str):
+                bs = lmp["base_score"].strip("[] \t\r\n")
+                lmp["base_score"] = bs
+        return res
+
+    _shap_tree.decode_ubjson_buffer = _patched_decode_ubjson_buffer
+except Exception:
+    pass
+
 from app.models import PMKisanApplicationDetails
 from app.services.engine_types import AnomalyFlagResult
 from app.services.ml_feature_extractor import (

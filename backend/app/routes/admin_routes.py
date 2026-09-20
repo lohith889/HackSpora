@@ -27,6 +27,7 @@ from app.schemas import (
     AuditLogResponse,
 )
 from app.services.model_evaluation import evaluate_pipeline_on_synthetic_ground_truth
+from app.services.network_service import get_network_data
 
 admin_router = APIRouter(prefix="/admin", tags=["Admin Officer Console"])
 
@@ -37,6 +38,21 @@ VALID_DECISIONS = {
     "REQUEST_DOCUMENTS": "DOCUMENTS_REQUESTED",
     "ESCALATE": "ESCALATED",
 }
+
+
+@admin_router.get(
+    "/sentinel/network",
+    summary="Fraud Ring Radar network of applications, resources, parcels, and villages",
+)
+def get_sentinel_network(
+    mode: str = Query("demo_ring", description="Network mode: demo_ring, demo_family, or live"),
+    application_id: Optional[int] = Query(None, description="Optional focus application ID for subgraph extraction"),
+    limit: int = Query(150, ge=1, le=500),
+    db: Session = Depends(get_db),
+    admin_user: User = Depends(require_role("ADMIN")),
+):
+    """Return graph-ready, privacy-preserving syndicate network data exclusively for scheme officers."""
+    return get_network_data(db, mode=mode, target_app_id=application_id, limit=limit)
 
 
 @admin_router.post(
