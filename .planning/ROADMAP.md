@@ -11,6 +11,7 @@
 - [x] Phase 5: Farmer Application Portal UI
 - [x] Phase 6: Admin Anomaly Review Console UI
 - [x] Phase 7: Master Seed Data & Live Demo Verification
+- [ ] Phase 8: Supervised XGBoost Risk Calibration & SHAP Explainability Engine
 
 | Phase | Name | Goal | Requirements | Criteria |
 |---|---|---|---|---|
@@ -21,6 +22,7 @@
 | 5 | Farmer Application Portal UI | Build responsive React frontend for farmer authentication, multi-step application form with OTP & document upload, and citizen status tracker | FARM-01, FARM-02, FARM-03 | 3 |
 | 6 | Admin Anomaly Review Console UI | Build administrative dashboard with KPI metrics, distribution charts, searchable applications table, deep anomaly dossier modal, officer decision workflow, and CSV export | ADM-01, ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 | 6 |
 | 7 | Master Seed Data & Live Demo Verification | Provision realistic seed datasets (users, master registries, 20 diverse risk applications) and run end-to-end verification tests | SEED-01, SEED-02, SEED-03, SEED-04 | 4 |
+| 8 | Supervised XGBoost Risk Engine | Implement two-stage hybrid XGBoost risk calibration model with SHAP feature attributions on multi-engine vector alongside statutory rules | XGB-01, XGB-02, XGB-03, XGB-04, XGB-05 | 5 |
 
 ---
 
@@ -109,3 +111,15 @@
 2. Seeder populates 20+ records across `land_records_master`, `bank_validation_master`, `exclusion_master`, `village_profile_master`, and `event_calendar_master`.
 3. Seeder creates 20 sample applications with pre-calculated anomaly reports distributed across Low (10), Medium (5), and High (5) risk tiers.
 4. Automated verification test validates user registration, form submission, anomaly scoring, admin decision workflow, and role-based privacy boundaries.
+
+### Phase 8: Supervised XGBoost Risk Calibration & SHAP Explainability Engine
+**Goal:** Implement a supervised XGBoost gradient-boosted decision tree meta-model that predicts fraud probability on multi-engine feature vectors with SHAP feature attributions, while preserving 100% compliance with statutory exclusion guardrails.  
+**Mode:** mvp  
+**Status:** Complete ✓  
+**Requirements:** XGB-01, XGB-02, XGB-03, XGB-04, XGB-05  
+**Success Criteria:**
+1. `XGB-01`: Backend environment incorporates `xgboost>=2.0.0` and `shap>=0.44.0` for sub-10ms tabular inference.
+2. `XGB-02`: Multi-engine feature extractor serializes raw claim attributes, fuzzy match ratios, graph centrality metrics, and engine flag severities into a normalized 24-dimensional feature vector.
+3. `XGB-03`: Two-stage scoring pipeline enforces hard statutory exclusion overrides ($Risk = 100$) while computing non-linear interaction risk probability via trained XGBoost booster.
+4. `XGB-04`: TreeSHAP explainer computes exact feature contribution values and extracts the top 3 predictive drivers for administrative auditability.
+5. `XGB-05`: Admin Application Detail UI renders dual scores (Rule vs. ML), SHAP waterfall/bar charts, and automated divergence badges.

@@ -22,7 +22,7 @@ from typing import List, Dict, Any
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BASE_DIR)
 
-from app.database import Base, engine, SessionLocal
+from app.database import Base, engine, SessionLocal, run_schema_migrations
 from app.models import (
     User,
     Application,
@@ -41,6 +41,7 @@ from app.services.anomaly_pipeline import run_pipeline
 from app.services.risk_scorer import compute_risk_score, get_recommended_action
 from app.services.confidence_engine import compute_confidence
 from app.services.rationale_generator import generate_rationale
+from app.services.xgboost_risk_engine import evaluate_xgboost_risk
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -848,7 +849,10 @@ def seed_applications(db: SessionLocal, users: Dict[str, User]):
             flags=pipeline_result.flags,
         )
 
-        # 6. Save Anomaly Report
+        # 6. Evaluate XGBoost ML Risk & TreeSHAP
+        ml_eval = evaluate_xgboost_risk(details, pipeline_result.flags, db, rule_risk_score=r_score)
+
+        # 7. Save Anomaly Report
         anom_report = AnomalyReport(
             application_id=app.id,
             risk_score=r_score,
@@ -856,6 +860,10 @@ def seed_applications(db: SessionLocal, users: Dict[str, User]):
             confidence_level=c_level,
             recommended_action=rec_action,
             rationale=rat,
+            ml_risk_score=ml_eval["ml_risk_score"],
+            is_statutory_override=ml_eval["is_statutory_override"],
+            divergence_score=ml_eval["divergence_score"],
+            ml_shap_drivers=ml_eval["top_shap_drivers"],
         )
         db.add(anom_report)
 
@@ -896,6 +904,7 @@ def main():
 
     # Initialize tables
     Base.metadata.create_all(bind=engine)
+    run_schema_migrations(engine)
 
     # Ensure uploads directory
     uploads_dir = os.path.join(BASE_DIR, "uploads")

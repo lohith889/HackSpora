@@ -29,7 +29,7 @@ SUPPORTED_LANGUAGES = {
 DEFAULT_STT_MODEL = "saaras:v3"
 DEFAULT_TRANSLATION_MODEL = "mayura:v1"
 DEFAULT_TTS_MODEL = "bulbul:v3"
-
+DEFAULT_SPEAKER='Kavya'
 
 def _get_headers() -> dict:
     key = os.getenv("SARVAM_API_KEY") or SARVAM_API_KEY
@@ -266,7 +266,7 @@ def translate_from_english(
 def text_to_speech(
     text: str,
     language_code: str,
-    speaker: Optional[str] = None
+    speaker: Optional[str] = DEFAULT_SPEAKER
 ) -> Optional[str]:
     """
     Generates spoken audio from text using Sarvam Bulbul v3 TTS.
@@ -297,6 +297,7 @@ def text_to_speech(
         "target_language_code": target_lang,
         "model": DEFAULT_TTS_MODEL,
         "enable_preprocessing": True,
+        "speaker" : speaker or DEFAULT_SPEAKER,
     }
     if speaker:
         payload["speaker"] = speaker

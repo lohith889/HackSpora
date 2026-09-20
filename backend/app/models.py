@@ -94,6 +94,10 @@ class AnomalyReport(Base):
     confidence_level = Column(String(20), nullable=False)  # Low, Medium, High
     recommended_action = Column(String(255), nullable=False)
     rationale = Column(Text, nullable=False)
+    ml_risk_score = Column(Integer, nullable=True)  # Calibrated XGBoost score (0-100)
+    is_statutory_override = Column(Boolean, default=False, nullable=False)
+    divergence_score = Column(Integer, default=0, nullable=False)  # ml_risk_score - risk_score
+    ml_shap_drivers = Column(JSON, nullable=True)  # Top 3 predictive SHAP drivers
     created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
 
     application = relationship("Application", back_populates="anomaly_report")

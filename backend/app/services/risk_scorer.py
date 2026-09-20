@@ -30,6 +30,21 @@ def compute_risk_score(flags: List[AnomalyFlagResult]) -> int:
     return min(100, max(0, total_score))
 
 
+def compute_hybrid_risk_score(
+    rule_score: int,
+    ml_score: int,
+    is_statutory_override: bool = False,
+) -> int:
+    """
+    Two-stage hybrid fusion:
+    - If statutory override is True -> 100
+    - Otherwise max(rule_score, ml_score) to ensure non-linear syndicate risks are not diluted.
+    """
+    if is_statutory_override:
+        return 100
+    return min(100, max(0, max(rule_score, ml_score)))
+
+
 def get_risk_tier(risk_score: int) -> str:
     """Return categorical risk tier."""
     if risk_score >= 75:

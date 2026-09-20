@@ -94,14 +94,45 @@ function QuickDossierDrawer({ app, onClose, onDecisionSuccess }) {
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
+          {/* Statutory Disqualification Banner */}
+          {app.is_statutory_override && (
+            <div className="border-2 border-red-600 bg-red-50 p-3 font-mono text-xs text-red-900 space-y-1">
+              <span className="stamp border border-red-700 bg-red-700 text-white text-[10px] font-bold px-1.5 py-0.2">
+                [STATUTORY EXCLUSION OVERRIDE]
+              </span>
+              <p className="font-sans text-[11px] text-red-800">
+                Application locked to 100 Risk under PM-KISAN Rule 4 due to legal disqualification.
+              </p>
+            </div>
+          )}
+
+          {/* ML Suspicion Surge Alert */}
+          {(app.divergence_score || 0) >= 35 && !app.is_statutory_override && (
+            <div className="border border-purple-400 bg-purple-50 p-3 font-mono text-xs text-purple-900 flex items-center justify-between">
+              <span className="font-bold">⚡ ML SUSPICION SURGE DETECTED</span>
+              <span className="stamp border border-purple-500 bg-purple-200 text-purple-950 font-bold text-[10px]">
+                +{app.divergence_score} PTS OVER HEURISTICS
+              </span>
+            </div>
+          )}
+
           {/* Metrics Rule */}
-          <div className="grid grid-cols-3 gap-3 font-mono text-xs">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
             <div className="border border-slate-200 p-3 bg-slate-50">
-              <span className="text-[10px] text-slate-500 uppercase block font-semibold">RISK ASSESSMENT</span>
+              <span className="text-[10px] text-slate-500 uppercase block font-semibold">HEURISTIC RISK</span>
               <span className={`text-xl font-bold block mt-0.5 ${app.risk_score >= 50 ? 'text-red-700' : 'text-slate-900'}`}>
                 {app.risk_score ?? 0} / 100
               </span>
               <span className="text-[10px] text-slate-500 uppercase font-semibold">{tier.label}</span>
+            </div>
+            <div className="border border-slate-200 p-3 bg-slate-50">
+              <span className="text-[10px] text-slate-500 uppercase block font-semibold">XGBOOST ML RISK</span>
+              <span className={`text-xl font-bold block mt-0.5 ${(app.ml_risk_score ?? app.risk_score) >= 50 ? 'text-purple-700' : 'text-slate-900'}`}>
+                {app.ml_risk_score ?? app.risk_score ?? 0} / 100
+              </span>
+              <span className="text-[10px] text-slate-500 uppercase font-semibold">
+                {(app.divergence_score || 0) >= 35 ? `Surge (+${app.divergence_score})` : 'Calibrated'}
+              </span>
             </div>
             <div className="border border-slate-200 p-3 bg-slate-50">
               <span className="text-[10px] text-slate-500 uppercase block font-semibold">CONFIDENCE INDEX</span>
@@ -311,6 +342,7 @@ export default function AdminApplicationsPage() {
   const [minRisk, setMinRisk] = useState(searchParams.get('min_risk') || '')
   const [maxRisk, setMaxRisk] = useState(searchParams.get('max_risk') || '')
   const [tierPreset, setTierPreset] = useState('ALL')
+  const [mlDivergenceOnly, setMlDivergenceOnly] = useState(false)
 
   // Sorting
   const [sortBy, setSortBy] = useState('risk_score')
@@ -346,6 +378,7 @@ export default function AdminApplicationsPage() {
 
   const applyTierPreset = (preset) => {
     setTierPreset(preset)
+    setMlDivergenceOnly(false)
     if (preset === 'ALL') {
       setMinRisk(''); setMaxRisk(''); setStatus('')
     } else if (preset === 'CRITICAL') {
@@ -361,7 +394,7 @@ export default function AdminApplicationsPage() {
     }
   }
 
-  // Client-side search + sort
+  // Client-side search + sort + ML divergence filter
   const filtered = useMemo(() => {
     let data = [...apps]
     if (search.trim()) {
@@ -374,6 +407,9 @@ export default function AdminApplicationsPage() {
         a.village_code?.toLowerCase().includes(q)
       )
     }
+    if (mlDivergenceOnly) {
+      data = data.filter(a => (a.divergence_score || 0) >= 35)
+    }
     data.sort((a, b) => {
       let av = a[sortBy] ?? -1
       let bv = b[sortBy] ?? -1
@@ -384,7 +420,7 @@ export default function AdminApplicationsPage() {
       return 0
     })
     return data
-  }, [apps, search, sortBy, sortDir])
+  }, [apps, search, sortBy, sortDir, mlDivergenceOnly])
 
   const handleDecisionSuccess = (appId, newStatus, fullData) => {
     setApps(prev =>
@@ -403,6 +439,7 @@ export default function AdminApplicationsPage() {
     setMinRisk('')
     setMaxRisk('')
     setTierPreset('ALL')
+    setMlDivergenceOnly(false)
   }
 
   return (
@@ -452,7 +489,7 @@ export default function AdminApplicationsPage() {
               key={preset}
               onClick={() => applyTierPreset(preset)}
               className={`px-3 py-1 border transition-colors uppercase text-[11px] ${
-                tierPreset === preset
+                tierPreset === preset && !mlDivergenceOnly
                   ? 'border-slate-900 bg-slate-900 text-white font-bold'
                   : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-900'
               }`}
@@ -460,9 +497,24 @@ export default function AdminApplicationsPage() {
               {preset}
             </button>
           ))}
+          <span className="text-slate-300 mx-1">|</span>
+          <button
+            onClick={() => {
+              setMlDivergenceOnly(!mlDivergenceOnly)
+              if (!mlDivergenceOnly) setTierPreset('')
+            }}
+            className={`px-3 py-1 border transition-colors uppercase text-[11px] flex items-center gap-1.5 ${
+              mlDivergenceOnly
+                ? 'border-purple-700 bg-purple-700 text-white font-bold shadow-sm'
+                : 'border-purple-300 bg-purple-50 text-purple-900 hover:border-purple-500 font-semibold'
+            }`}
+          >
+            <span>⚡</span>
+            <span>ML DIVERGENT (≥+35)</span>
+          </button>
         </div>
 
-        {(search || statusFilter || districtFilter || minRisk || maxRisk) && (
+        {(search || statusFilter || districtFilter || minRisk || maxRisk || mlDivergenceOnly) && (
           <button
             onClick={clearFilters}
             className="text-slate-600 hover:text-slate-900 underline text-[11px]"
@@ -573,9 +625,27 @@ export default function AdminApplicationsPage() {
                       <span className="text-slate-500">{a.village_code || '—'}</span>
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
-                      <span className={`stamp text-[11px] ${tier.color}`}>
-                        {a.risk_score != null ? `${a.risk_score} / 100` : '—'}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`stamp text-[11px] ${tier.color}`}>
+                            {a.risk_score != null ? `Rule: ${a.risk_score}` : '—'}
+                          </span>
+                          {a.ml_risk_score != null && (
+                            <span className="font-mono text-[10px] text-purple-900 bg-purple-50 border border-purple-200 px-1.5 py-0.5 font-semibold">
+                              ML: {a.ml_risk_score}
+                            </span>
+                          )}
+                        </div>
+                        {a.is_statutory_override ? (
+                          <span className="stamp border border-red-400 bg-red-100 text-red-900 text-[9px] font-bold">
+                            RULE 4 OVERRIDE (100)
+                          </span>
+                        ) : (a.divergence_score || 0) >= 35 ? (
+                          <span className="stamp border border-purple-400 bg-purple-100 text-purple-900 text-[9px] font-extrabold">
+                            ⚡ ML SURGE (+{a.divergence_score})
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap text-slate-600 text-[11px]">
                       {a.confidence_score != null ? `${a.confidence_score}%` : '85%'}

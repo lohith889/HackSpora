@@ -156,12 +156,22 @@ class AnomalyFlagResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class SHAPDriverResponse(BaseModel):
+    feature_name: str
+    attribution_value: float
+    description: str
+
+
 class AnomalyReportResponse(BaseModel):
     risk_score: int
     confidence_score: int = 85
     confidence_level: str
     recommended_action: str
     rationale: str
+    ml_risk_score: Optional[int] = None
+    is_statutory_override: Optional[bool] = False
+    divergence_score: Optional[int] = 0
+    ml_shap_drivers: Optional[List[Dict[str, Any]]] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -172,6 +182,9 @@ class AdminApplicationDetail(BaseModel):
     scheme_code: str
     status: str
     risk_score: Optional[int] = None
+    ml_risk_score: Optional[int] = None
+    is_statutory_override: Optional[bool] = False
+    divergence_score: Optional[int] = 0
     confidence_score: Optional[int] = None
     confidence_level: Optional[str] = None
     recommended_action: Optional[str] = None

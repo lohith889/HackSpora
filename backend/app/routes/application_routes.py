@@ -17,9 +17,10 @@ from app.schemas import (
 )
 from app.services import application_service
 from app.services.anomaly_pipeline import run_pipeline
-from app.services.risk_scorer import compute_risk_score, get_recommended_action
+from app.services.risk_scorer import compute_risk_score, compute_hybrid_risk_score, get_recommended_action
 from app.services.confidence_engine import compute_confidence
 from app.services.rationale_generator import generate_rationale
+from app.services.xgboost_risk_engine import evaluate_xgboost_risk
 
 application_router = APIRouter(prefix="/applications", tags=["Applications"])
 
@@ -118,11 +119,16 @@ async def submit_pm_kisan_application(
                 db.add(db_flag)
 
             # 2. Compute Decoupled Risk & Confidence Scores
-            risk_score = compute_risk_score(pipeline_result.flags)
+            rule_risk_score = compute_risk_score(pipeline_result.flags)
+
+            # 2b. Two-Stage Supervised XGBoost Evaluation & TreeSHAP Attributions
+            ml_eval = evaluate_xgboost_risk(details, pipeline_result.flags, db, rule_risk_score=rule_risk_score)
+            final_risk_score = ml_eval["final_hybrid_score"]
+
             confidence_score, confidence_level = compute_confidence(pipeline_result.flags, details, db)
-            recommended_action = get_recommended_action(risk_score, pipeline_result.flags)
+            recommended_action = get_recommended_action(final_risk_score, pipeline_result.flags)
             rationale = generate_rationale(
-                risk_score=risk_score,
+                risk_score=final_risk_score,
                 confidence_score=confidence_score,
                 confidence_level=confidence_level,
                 recommended_action=recommended_action,
@@ -132,16 +138,20 @@ async def submit_pm_kisan_application(
             # 3. Persist Anomaly Report Dossier
             anomaly_report = AnomalyReport(
                 application_id=application.id,
-                risk_score=risk_score,
+                risk_score=final_risk_score,
                 confidence_score=confidence_score,
                 confidence_level=confidence_level,
                 recommended_action=recommended_action,
                 rationale=rationale,
+                ml_risk_score=ml_eval["ml_risk_score"],
+                is_statutory_override=ml_eval["is_statutory_override"],
+                divergence_score=ml_eval["divergence_score"],
+                ml_shap_drivers=ml_eval["top_shap_drivers"],
             )
             db.add(anomaly_report)
 
             # 4. Update Application triage summary (Status remains SUBMITTED pending Officer Final Decision)
-            application.risk_score = risk_score
+            application.risk_score = final_risk_score
             application.confidence_score = confidence_score
             application.confidence_level = confidence_level
             application.recommended_action = recommended_action
@@ -260,12 +270,17 @@ def get_application_details(
     # 2. Admin view (full internal dossier)
     anomaly_rep = None
     if app.anomaly_report:
+        r = app.anomaly_report
         anomaly_rep = AnomalyReportResponse(
-            risk_score=app.anomaly_report.risk_score,
-            confidence_score=app.anomaly_report.confidence_score or 85,
-            confidence_level=app.anomaly_report.confidence_level,
-            recommended_action=app.anomaly_report.recommended_action,
-            rationale=app.anomaly_report.rationale,
+            risk_score=r.risk_score,
+            confidence_score=r.confidence_score or 85,
+            confidence_level=r.confidence_level,
+            recommended_action=r.recommended_action,
+            rationale=r.rationale,
+            ml_risk_score=r.ml_risk_score,
+            is_statutory_override=r.is_statutory_override,
+            divergence_score=r.divergence_score,
+            ml_shap_drivers=r.ml_shap_drivers,
         )
 
     flags = [
@@ -279,12 +294,16 @@ def get_application_details(
         for f in (app.anomaly_flags or [])
     ]
 
+    r = app.anomaly_report
     return AdminApplicationDetail(
         id=app.id,
         user_id=app.user_id,
         scheme_code=app.scheme_code,
         status=app.status,
         risk_score=app.risk_score,
+        ml_risk_score=r.ml_risk_score if r else None,
+        is_statutory_override=r.is_statutory_override if r else False,
+        divergence_score=r.divergence_score if r else 0,
         confidence_score=app.confidence_score,
         confidence_level=app.confidence_level,
         recommended_action=app.recommended_action,

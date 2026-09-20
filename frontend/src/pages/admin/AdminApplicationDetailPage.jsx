@@ -105,6 +105,13 @@ export default function AdminApplicationDetailPage() {
   const st = getStatusBadge(app.status)
   const flags = app.anomaly_flags || []
 
+  // ML Risk Calibration & Explainability (XGB-05)
+  const isOverride = app.anomaly_report?.is_statutory_override || app.is_statutory_override || false
+  const ruleScore = app.risk_score ?? 0
+  const mlScore = app.anomaly_report?.ml_risk_score ?? app.ml_risk_score ?? ruleScore
+  const divergence = app.anomaly_report?.divergence_score ?? app.divergence_score ?? (mlScore - ruleScore)
+  const shapDrivers = app.anomaly_report?.ml_shap_drivers || []
+
   // Check specific flags
   const flagCodes = new Set(flags.map(f => f.anomaly_code))
   const hasLandMismatch = flagCodes.has('LAND_AREA_DISCREPANCY') || flagCodes.has('LAND_OWNER_NAME_MISMATCH')
@@ -201,6 +208,175 @@ export default function AdminApplicationDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* Statutory Override Alert Banner (Statutory PM-KISAN Rule 4 Invariant) */}
+      {isOverride && (
+        <div className="border-2 border-red-600 bg-red-50 p-4 font-mono text-xs text-red-900 shadow-sm flex flex-col sm:flex-row items-start gap-3">
+          <span className="stamp border border-red-700 bg-red-700 text-white text-[11px] font-bold px-2 py-0.5 whitespace-nowrap">
+            [STATUTORY OVERRIDE ENFORCED]
+          </span>
+          <div className="space-y-1">
+            <strong className="block text-red-950 font-bold uppercase tracking-wide text-xs">
+              Mandatory Statutory Disqualification — PM-KISAN Operational Guidelines Rule 4
+            </strong>
+            <p className="font-sans text-xs text-red-800 leading-relaxed">
+              This application triggered one or more strict statutory disqualifications (e.g. Income Taxpayer assessee, Deceased identity claim, Institutional landholder, or Non-Agricultural land). The KisanGuard pipeline has locked the Threat Score to Maximum (100/100), superseding statistical probability calculations.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Dual-Risk Calibration & Model Divergence Card (XGB-05) */}
+      <div className="border border-slate-300 bg-white p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between border-b border-slate-200 pb-3 gap-2">
+          <div>
+            <div className="text-[10px] font-mono uppercase text-slate-500 font-semibold">
+              SCHEDULE 0 // DUAL-ENGINE RISK CALIBRATION (HEURISTIC VS. SUPERVISED XGBOOST)
+            </div>
+            <h2 className="font-serif text-xl font-bold text-slate-900 mt-0.5">
+              Dual-Engine Risk Calibration &amp; Machine Learning Calibration
+            </h2>
+            <p className="font-sans text-xs text-slate-600 mt-0.5">
+              Comparative analysis of linear rule accumulation vs. non-linear multi-signal interaction probabilities
+            </p>
+          </div>
+          {divergence >= 35 && (
+            <span className="stamp border-2 border-purple-600 bg-purple-100 text-purple-900 font-extrabold text-xs px-2.5 py-1 tracking-wider whitespace-nowrap">
+              ⚡ ML SUSPICION SURGE (+{divergence} PTS)
+            </span>
+          )}
+        </div>
+
+        {/* Comparison Meters Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+          {/* 1. Heuristic Rule Meter */}
+          <div className="border border-slate-200 p-4 bg-slate-50 space-y-2.5">
+            <div className="flex justify-between items-baseline">
+              <span className="text-slate-700 uppercase font-bold text-[11px]">1. Heuristic Rule Score</span>
+              <span className="text-[10px] text-slate-500">Linear Engine Sum</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className={`text-3xl font-bold ${ruleScore >= 70 ? 'text-red-700' : ruleScore >= 40 ? 'text-amber-700' : 'text-slate-900'}`}>
+                {ruleScore}
+              </span>
+              <span className="text-slate-500">/ 100</span>
+            </div>
+            <div className="w-full bg-slate-200 h-2.5 rounded-none overflow-hidden">
+              <div
+                className={`h-full transition-all ${ruleScore >= 70 ? 'bg-red-600' : ruleScore >= 40 ? 'bg-amber-500' : 'bg-emerald-600'}`}
+                style={{ width: `${Math.min(100, Math.max(0, ruleScore))}%` }}
+              />
+            </div>
+            <p className="font-sans text-[11px] text-slate-500 leading-tight">
+              Accumulated penalty sum across statutory, land registry, PFMS banking, and identity verification checks.
+            </p>
+          </div>
+
+          {/* 2. Divergence Delta Indicator */}
+          <div className="border border-slate-200 p-4 bg-slate-50 flex flex-col justify-between space-y-2">
+            <div className="flex justify-between items-baseline">
+              <span className="text-slate-700 uppercase font-bold text-[11px]">Model Divergence</span>
+              <span className="text-[10px] text-slate-500">Δ ML - Rule</span>
+            </div>
+            <div className="text-center py-1">
+              <span className={`text-3xl font-bold font-mono ${divergence >= 35 ? 'text-purple-700' : divergence > 0 ? 'text-blue-700' : 'text-slate-700'}`}>
+                {divergence > 0 ? `+${divergence}` : divergence}
+              </span>
+              <span className="block text-[10px] uppercase font-semibold text-slate-500 mt-0.5">
+                {divergence >= 35 ? 'High Non-Linear Risk Surge' : divergence > 0 ? 'ML Elevated Concern' : 'Mutual Calibration Alignment'}
+              </span>
+            </div>
+            <div className="font-sans text-[11px] text-slate-600 text-center border-t border-slate-200 pt-2 leading-tight">
+              {divergence >= 35
+                ? 'XGBoost detected complex non-linear syndicate interactions that exceeded isolated rule penalties.'
+                : 'Rule heuristics and gradient boosted decision trees are in statistical agreement.'}
+            </div>
+          </div>
+
+          {/* 3. XGBoost ML Meter */}
+          <div className="border border-slate-200 p-4 bg-slate-50 space-y-2.5">
+            <div className="flex justify-between items-baseline">
+              <span className="text-slate-700 uppercase font-bold text-[11px]">2. XGBoost ML Score</span>
+              <span className="text-[10px] text-slate-500">Supervised Booster</span>
+            </div>
+            <div className="flex items-baseline gap-2">
+              <span className={`text-3xl font-bold ${mlScore >= 70 ? 'text-purple-700' : mlScore >= 40 ? 'text-amber-700' : 'text-emerald-700'}`}>
+                {mlScore}
+              </span>
+              <span className="text-slate-500">/ 100</span>
+            </div>
+            <div className="w-full bg-slate-200 h-2.5 rounded-none overflow-hidden">
+              <div
+                className={`h-full transition-all ${mlScore >= 70 ? 'bg-purple-600' : mlScore >= 40 ? 'bg-amber-500' : 'bg-emerald-600'}`}
+                style={{ width: `${Math.min(100, Math.max(0, mlScore))}%` }}
+              />
+            </div>
+            <p className="font-sans text-[11px] text-slate-500 leading-tight">
+              Calibrated multi-variate probability vector assessing coordinated ring patterns and multi-signal drift.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* TreeSHAP Feature Attribution Bar Chart (XGB-05) */}
+      {shapDrivers.length > 0 && (
+        <div className="border border-slate-300 bg-white p-6 shadow-sm space-y-4">
+          <div className="border-b border-slate-200 pb-3 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
+            <div>
+              <div className="text-[10px] font-mono uppercase text-slate-500 font-semibold">
+                EXPLAINABILITY ENGINE // MATHEMATICAL FEATURE CONTRIBUTIONS
+              </div>
+              <h3 className="font-serif text-lg font-bold text-slate-900 mt-0.5">
+                TreeSHAP Feature Attribution (Top 3 Model Drivers)
+              </h3>
+              <p className="font-sans text-xs text-slate-600 mt-0.5">
+                Local Shapley values computed in margin space via tree-path perturbation showing which features increased (+) or mitigated (-) suspicion.
+              </p>
+            </div>
+            <span className="font-mono text-[10px] text-slate-700 uppercase border border-slate-300 px-2.5 py-1 bg-slate-50 font-semibold whitespace-nowrap">
+              Fast Native C++ TreeSHAP (&lt;2ms)
+            </span>
+          </div>
+
+          {/* Horizontal Feature Attribution Bars */}
+          <div className="space-y-3.5">
+            {shapDrivers.map((driver, idx) => {
+              const isPositive = driver.attribution_value >= 0
+              const absVal = Math.abs(driver.attribution_value)
+              const maxVal = Math.max(...shapDrivers.map(d => Math.abs(d.attribution_value)), 1.0)
+              const pct = Math.min(100, Math.max(15, Math.round((absVal / maxVal) * 100)))
+
+              return (
+                <div key={idx} className="border border-slate-200 p-4 bg-slate-50 space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 font-mono text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-[13px]">{driver.feature_name}</span>
+                      <span className={`stamp text-[10px] px-1.5 py-0.5 font-bold ${isPositive ? 'border-red-300 bg-red-100 text-red-800' : 'border-emerald-300 bg-emerald-100 text-emerald-800'}`}>
+                        {isPositive ? 'INCREASES RISK (+)' : 'MITIGATES RISK (-)'}
+                      </span>
+                    </div>
+                    <span className="font-bold text-slate-800">
+                      SHAP Contribution: {driver.attribution_value > 0 ? `+${driver.attribution_value.toFixed(4)}` : driver.attribution_value.toFixed(4)}
+                    </span>
+                  </div>
+
+                  {/* Attribution Bar */}
+                  <div className="w-full bg-slate-200 h-3 rounded-none overflow-hidden flex">
+                    <div
+                      className={`h-full transition-all ${isPositive ? 'bg-red-600' : 'bg-emerald-600'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+
+                  <p className="font-sans text-xs text-slate-600">
+                    {driver.description}
+                  </p>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* AI Rationale Summary Banner */}
       {app.anomaly_report?.rationale && (

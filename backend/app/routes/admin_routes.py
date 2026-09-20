@@ -163,13 +163,18 @@ def list_applications_for_admin(
             continue
 
         anomaly_rep = None
-        if a.anomaly_report:
+        r = a.anomaly_report
+        if r:
             anomaly_rep = AnomalyReportResponse(
-                risk_score=a.anomaly_report.risk_score,
-                confidence_score=a.anomaly_report.confidence_score or 85,
-                confidence_level=a.anomaly_report.confidence_level,
-                recommended_action=a.anomaly_report.recommended_action,
-                rationale=a.anomaly_report.rationale,
+                risk_score=r.risk_score,
+                confidence_score=r.confidence_score or 85,
+                confidence_level=r.confidence_level,
+                recommended_action=r.recommended_action,
+                rationale=r.rationale,
+                ml_risk_score=r.ml_risk_score,
+                is_statutory_override=r.is_statutory_override,
+                divergence_score=r.divergence_score,
+                ml_shap_drivers=r.ml_shap_drivers,
             )
 
         flags = [
@@ -189,6 +194,9 @@ def list_applications_for_admin(
             scheme_code=a.scheme_code,
             status=a.status,
             risk_score=a.risk_score,
+            ml_risk_score=r.ml_risk_score if r else None,
+            is_statutory_override=r.is_statutory_override if r else False,
+            divergence_score=r.divergence_score if r else 0,
             confidence_score=a.confidence_score,
             confidence_level=a.confidence_level,
             recommended_action=a.recommended_action,

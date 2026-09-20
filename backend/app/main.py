@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.database import Base, engine
+from app.database import Base, engine, run_schema_migrations
 from app.routes.auth_routes import router as auth_router
 from app.routes.scheme_routes import scheme_router
 from app.routes.application_routes import application_router
@@ -19,6 +19,7 @@ async def lifespan(app: FastAPI):
     """Lifespan context manager for database initialization and uploads directory."""
     # Create all database tables if they do not already exist
     Base.metadata.create_all(bind=engine)
+    run_schema_migrations(engine)
 
     # Ensure uploads directory exists
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
