@@ -156,6 +156,7 @@ def chat(request: ChatRequest):
     ]
 
     try:
+        _ensure_rag_modules()
         result = process_multilingual_chat(
             query_text=request.question,
             audio_bytes=audio_bytes,
@@ -227,6 +228,7 @@ async def chat_voice(
         parsed_history = []
 
     try:
+        _ensure_rag_modules()
         result = process_multilingual_chat(
             query_text="",
             audio_bytes=audio_bytes,

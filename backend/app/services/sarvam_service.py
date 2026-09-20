@@ -11,9 +11,10 @@ from dotenv import load_dotenv
 logger = logging.getLogger("sarvam_service")
 logger.setLevel(logging.INFO)
 
-# Load environment variables from project root (.env)
-_ENV_PATH = Path(__file__).resolve().parents[3] / ".env"
-load_dotenv(dotenv_path=_ENV_PATH)
+# Load environment variables from project root (.env) or backend/.env
+_ROOT_DIR = Path(__file__).resolve().parents[3]
+load_dotenv(dotenv_path=_ROOT_DIR / ".env")
+load_dotenv(dotenv_path=_ROOT_DIR / "backend" / ".env")
 
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
 SARVAM_BASE_URL = "https://api.sarvam.ai"

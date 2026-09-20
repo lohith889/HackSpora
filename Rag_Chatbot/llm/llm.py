@@ -18,10 +18,12 @@ from dotenv import load_dotenv
 from langchain_groq import ChatGroq
 from config import LLM_MODEL
 
-# Load .env from HackSpora root (two levels up from Rag_Chatbot/llm/)
-# This works whether the module is run standalone or imported from the backend.
-_ENV_PATH = Path(__file__).resolve().parents[2] / ".env"
+# Load .env from HackSpora root or backend/ folder
+_ROOT_DIR = Path(__file__).resolve().parents[2]
+_ENV_PATH = _ROOT_DIR / ".env"
+_BACKEND_ENV_PATH = _ROOT_DIR / "backend" / ".env"
 load_dotenv(dotenv_path=_ENV_PATH)
+load_dotenv(dotenv_path=_BACKEND_ENV_PATH)
 
 
 def load_llm():
