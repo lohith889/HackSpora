@@ -30,7 +30,7 @@ SUPPORTED_LANGUAGES = {
 DEFAULT_STT_MODEL = "saaras:v3"
 DEFAULT_TRANSLATION_MODEL = "mayura:v1"
 DEFAULT_TTS_MODEL = "bulbul:v3"
-DEFAULT_SPEAKER='Kavya'
+DEFAULT_SPEAKER = "kavya"
 
 def _get_headers() -> dict:
     key = os.getenv("SARVAM_API_KEY") or SARVAM_API_KEY
@@ -293,15 +293,14 @@ def text_to_speech(
     # Take up to 2 key sentences / 450 characters for clean, responsive audio playback.
     tts_input = spoken_text[:450].strip()
 
+    chosen_speaker = (speaker or DEFAULT_SPEAKER).lower().strip()
     payload = {
         "inputs": [tts_input],
         "target_language_code": target_lang,
         "model": DEFAULT_TTS_MODEL,
         "enable_preprocessing": True,
-        "speaker" : speaker or DEFAULT_SPEAKER,
+        "speaker": chosen_speaker,
     }
-    if speaker:
-        payload["speaker"] = speaker
 
     try:
         response = requests.post(url, headers=headers, json=payload, timeout=25)
