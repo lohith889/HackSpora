@@ -44,50 +44,50 @@ export default function DashboardPage() {
           <div className="flex flex-col md:flex-row md:items-baseline justify-between gap-4 border-b border-slate-200 pb-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500 font-semibold">
+                <span className="text-[11px] font-semibold tracking-wide text-emerald-800">
                   PM-KISAN BENEFICIARY SERVICES // कृषक सेवा पोर्टल
                 </span>
-                <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-bold">
+                <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-semibold rounded-full px-2.5 py-0.5">
                   AUTHENTICATED CITIZEN
                 </span>
               </div>
-              <h1 className="font-serif text-3xl font-bold tracking-tight text-slate-900 mt-1">
+              <h1 className="font-heading text-3xl font-bold tracking-tight text-slate-900 mt-1">
                 {user?.full_name || 'Registered Cultivator'}
               </h1>
-              <p className="font-sans text-xs text-slate-600 mt-0.5">
+              <p className="text-xs text-slate-600 mt-0.5 font-normal">
                 Pradhan Mantri Kisan Samman Nidhi (PM-KISAN) • Direct Benefit Transfer Portal
               </p>
             </div>
 
             <Link
               to="/apply"
-              className="bg-emerald-900 hover:bg-emerald-800 text-white self-start md:self-auto py-2.5 px-5 text-xs font-mono font-bold uppercase tracking-wider transition-colors shadow-sm"
+              className="bg-emerald-700 hover:bg-emerald-800 text-white self-start md:self-auto py-2.5 px-5 text-xs font-semibold rounded-xl transition-all shadow-sm hover:shadow"
             >
               + Lodge New Claim (Form A-1) →
             </Link>
           </div>
 
-          {/* Monospace User Metadata Rule */}
-          <div className="flex flex-wrap items-center gap-x-8 gap-y-2 mt-4 font-mono text-xs text-slate-600">
-            <span>REGISTRATION EMAIL: <strong className="text-slate-900">{user?.email || '—'}</strong></span>
+          {/* User Metadata Rule */}
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-2 mt-4 text-xs text-slate-600">
+            <span>Registration Email: <strong className="text-slate-900 font-medium">{user?.email || '—'}</strong></span>
             {user?.mobile_number && (
-              <span>MOBILE: <strong className="text-slate-900">{user.mobile_number}</strong></span>
+              <span>Mobile: <strong className="text-slate-900 font-medium">{user.mobile_number}</strong></span>
             )}
             {user?.date_of_birth && (
-              <span>DATE OF BIRTH: <strong className="text-slate-900">{formatDate(user.date_of_birth)}</strong></span>
+              <span>Date of Birth: <strong className="text-slate-900 font-medium">{formatDate(user.date_of_birth)}</strong></span>
             )}
-            <span>KYC STATUS: <strong className="text-emerald-800 font-bold">VERIFIED ON RECORD</strong></span>
+            <span>KYC Status: <strong className="text-emerald-700 font-semibold">VERIFIED ON RECORD</strong></span>
           </div>
         </div>
       </div>
 
       {/* Statutory Scheme Parameter Rule */}
-      <div className="border border-slate-300 p-4 bg-slate-50 font-mono text-xs leading-relaxed text-slate-700 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+      <div className="border border-emerald-200/70 p-4 bg-emerald-50/40 rounded-2xl text-xs leading-relaxed text-slate-700 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div>
-          <strong className="text-slate-900 uppercase font-bold">Statutory Entitlement (Clause 3):</strong>{' '}
+          <strong className="text-emerald-950 font-semibold">Statutory Entitlement (Clause 3):</strong>{' '}
           Financial assistance of ₹6,000/- per annum in three equal 4-monthly installments of ₹2,000/- credited directly into authenticated Aadhaar-linked bank accounts via PFMS/DBT.
         </div>
-        <span className="text-[10px] text-slate-500 uppercase border border-slate-200 px-2 py-1 bg-white font-semibold whitespace-nowrap">
+        <span className="text-[11px] text-slate-500 border border-slate-200/80 px-2.5 py-1 bg-white rounded-full font-medium whitespace-nowrap">
           F.No. 1-1/2019-Credit-I
         </span>
       </div>
