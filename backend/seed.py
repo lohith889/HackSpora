@@ -35,6 +35,7 @@ from app.models import (
     ExclusionMaster,
     VillageProfileMaster,
     EventCalendarMaster,
+    UIDAIAadhaarMaster,
     AuditLog,
 )
 from app.auth import hash_password, hash_aadhaar, mask_aadhaar
@@ -162,6 +163,62 @@ def seed_users(db: SessionLocal) -> Dict[str, User]:
 # ─────────────────────────────────────────────────────────────────────────────
 # 2. SEED MASTER REGISTRIES (SEED-02)
 # ─────────────────────────────────────────────────────────────────────────────
+
+def seed_uidai_aadhaar_master(db: SessionLocal):
+    """Seed official government UIDAI Central Identities Data Repository (25+ records)."""
+    print("  -> Seeding UIDAI Central Identities Data Repository (25 records)...")
+    db.query(UIDAIAadhaarMaster).delete()
+
+    identities = [
+        # (raw_aadhaar, name, dob, gender, mobile, pincode, state, status, ekyc_eligible)
+        ("100000000001", "Ramesh Kumar", datetime.date(1985, 6, 15), "Male", "9876543211", "250001", "UP", "ACTIVE", True),
+        ("100000000002", "Suresh Patel", datetime.date(1982, 3, 22), "Male", "9876543212", "250001", "UP", "ACTIVE", True),
+        ("100000000003", "Anita Devi", datetime.date(1990, 11, 5), "Female", "9876543213", "250001", "UP", "ACTIVE", True),
+        ("100000000004", "Vikram Singh", datetime.date(1978, 8, 19), "Male", "9876543214", "250002", "UP", "ACTIVE", True),
+        ("100000000005", "Sunita Sharma", datetime.date(1987, 1, 30), "Female", "9876543215", "250002", "UP", "ACTIVE", True),
+        ("100000000006", "Mohan Lal", datetime.date(1975, 5, 14), "Male", "9876543216", "250003", "UP", "ACTIVE", True),
+        ("100000000007", "Geeta Verma", datetime.date(1992, 9, 8), "Female", "9876543217", "250003", "UP", "ACTIVE", True),
+        ("100000000008", "Rajesh Gupta", datetime.date(1980, 12, 25), "Male", "9876543218", "250004", "UP", "ACTIVE", True),
+        ("100000000009", "Pooja Yadav", datetime.date(1994, 4, 17), "Female", "9876543219", "250004", "UP", "ACTIVE", True),
+        ("100000000010", "Dinesh Chandra", datetime.date(1970, 7, 3), "Male", "9876543220", "250005", "UP", "ACTIVE", True),
+        ("100000000011", "Kavita Rani", datetime.date(1989, 10, 12), "Female", "9876543221", "283111", "UP", "ACTIVE", True),
+        ("100000000012", "Santosh Tiwari", datetime.date(1983, 2, 18), "Male", "9876543222", "283111", "UP", "ACTIVE", True),
+        ("100000000013", "Meena Kumari", datetime.date(1991, 6, 29), "Female", "9876543223", "283112", "UP", "ACTIVE", True),
+        ("100000000014", "Deepak Rawat", datetime.date(1988, 4, 12), "Male", "9876543224", "283112", "UP", "ACTIVE", True),
+        ("100000000015", "Shanti Devi", datetime.date(1976, 12, 1), "Female", "9876543225", "283113", "UP", "ACTIVE", True),
+        ("100000000018", "Raghuveer Saran", datetime.date(1968, 9, 15), "Male", "9876543228", "250002", "UP", "ACTIVE", True),
+        ("100000000020", "Govind Prasad", datetime.date(1984, 7, 22), "Male", "9876543230", "250003", "UP", "ACTIVE", True),
+        ("100000000022", "Hari Om", datetime.date(1979, 5, 10), "Male", "9876543232", "226101", "UP", "ACTIVE", True),
+        ("100000000023", "Radha Krishna", datetime.date(1986, 8, 14), "Male", "9876543233", "226101", "UP", "ACTIVE", True),
+        ("100000000024", "Kamla Devi", datetime.date(1973, 11, 20), "Female", "9876543234", "226102", "UP", "ACTIVE", True),
+        ("100000000025", "Nand Kishore", datetime.date(1981, 3, 5), "Male", "9876543235", "226102", "UP", "ACTIVE", True),
+        
+        # Statutory Exclusion Identities in UIDAI
+        ("200000000001", "Rajeshwar Prasad", datetime.date(1972, 8, 20), "Male", "9876543211", "250001", "UP", "ACTIVE", True),
+        ("200000000002", "Ashok Singhal", datetime.date(1974, 1, 10), "Male", "9876543241", "250001", "UP", "ACTIVE", True),
+        ("200000000018", "Late Ram Swaroop", datetime.date(1948, 4, 12), "Male", "9876543242", "250001", "UP", "ACTIVE", True),
+
+        # Anomaly UIDAI Records (Deactivated / Suspended)
+        ("300000000001", "Sanjay Verma", datetime.date(1977, 3, 15), "Male", "9876543261", "250001", "UP", "DEACTIVATED", False),
+        ("300000000002", "Praveen Kumar", datetime.date(1985, 11, 22), "Male", "9876543262", "250001", "UP", "SUSPENDED", False),
+    ]
+
+    for item in identities:
+        rec = UIDAIAadhaarMaster(
+            aadhaar_ref=hash_aadhaar(item[0]),
+            aadhaar_masked=mask_aadhaar(item[0]),
+            full_name=item[1],
+            date_of_birth=item[2],
+            gender=item[3],
+            mobile_number=item[4],
+            pincode=item[5],
+            state_code=item[6],
+            aadhaar_status=item[7],
+            ekyc_eligible=item[8],
+        )
+        db.add(rec)
+    db.commit()
+
 
 def seed_land_records(db: SessionLocal):
     """Seed 25+ land parcel master records."""
@@ -1191,6 +1248,7 @@ def main():
     db = SessionLocal()
     try:
         users = seed_users(db)
+        seed_uidai_aadhaar_master(db)
         seed_land_records(db)
         seed_land_deed_registry(db)
         seed_bank_records(db)

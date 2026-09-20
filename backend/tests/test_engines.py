@@ -9,7 +9,7 @@ import pytest
 from app.models import (
     User, Application, PMKisanApplicationDetails,
     LandRecordMaster, BankValidationMaster, ExclusionMaster,
-    VillageProfileMaster, EventCalendarMaster, AnomalyFlag,
+    VillageProfileMaster, EventCalendarMaster, UIDAIAadhaarMaster, AnomalyFlag,
 )
 from app.auth import hash_password, hash_aadhaar
 from app.services.engine_types import AnomalyFlagResult
@@ -233,6 +233,139 @@ class TestIdentityEngine:
         flag = next(f for f in flags if f.anomaly_code == "IDENTITY_BULK_MOBILE")
         assert flag.severity == "Medium"
         db.close()
+
+    def test_uidai_active_demographic_match(self):
+        """Clean demographic match against UIDAI master → no UIDAI flags."""
+        db = TestingSessionLocal()
+        user = seed_user(db, "uidai_ok@test.com")
+        raw_aadhaar = "999888777001"
+        ref = hash_aadhaar(raw_aadhaar)
+        uidai = UIDAIAadhaarMaster(
+            aadhaar_ref=ref,
+            aadhaar_masked="XXXX-XXXX-7001",
+            full_name="Rajendra Singh",
+            date_of_birth=datetime.date(1985, 4, 10),
+            gender="Male",
+            mobile_number="9876500001",
+            aadhaar_status="ACTIVE",
+            ekyc_eligible=True,
+        )
+        db.add(uidai)
+        db.commit()
+
+        _, details = seed_application(
+            db, user.id,
+            farmer_name="Rajendra Singh",
+            aadhaar_ref=ref,
+            date_of_birth=datetime.date(1985, 4, 10),
+            gender="Male",
+        )
+        flags = identity_engine.run(details, db)
+        codes = [f.anomaly_code for f in flags]
+        assert "IDENTITY_AADHAAR_DEACTIVATED" not in codes
+        assert "IDENTITY_NAME_MISMATCH_WITH_UIDAI" not in codes
+        assert "IDENTITY_DOB_MISMATCH_WITH_UIDAI" not in codes
+        db.close()
+
+    def test_uidai_deactivated_status(self):
+        """Deactivated UIDAI identity → Critical anomaly flag."""
+        db = TestingSessionLocal()
+        user = seed_user(db, "uidai_deact@test.com")
+        raw_aadhaar = "999888777002"
+        ref = hash_aadhaar(raw_aadhaar)
+        uidai = UIDAIAadhaarMaster(
+            aadhaar_ref=ref,
+            aadhaar_masked="XXXX-XXXX-7002",
+            full_name="Sunil Sharma",
+            date_of_birth=datetime.date(1980, 1, 1),
+            gender="Male",
+            aadhaar_status="DEACTIVATED",
+            ekyc_eligible=False,
+        )
+        db.add(uidai)
+        db.commit()
+
+        _, details = seed_application(
+            db, user.id,
+            farmer_name="Sunil Sharma",
+            aadhaar_ref=ref,
+            date_of_birth=datetime.date(1980, 1, 1),
+            gender="Male",
+        )
+        flags = identity_engine.run(details, db)
+        codes = [f.anomaly_code for f in flags]
+        assert "IDENTITY_AADHAAR_DEACTIVATED" in codes
+        flag = next(f for f in flags if f.anomaly_code == "IDENTITY_AADHAAR_DEACTIVATED")
+        assert flag.severity == "Critical"
+        assert flag.score == 55
+        db.close()
+
+    def test_uidai_name_mismatch(self):
+        """Name divergence against UIDAI record → High severity flag."""
+        db = TestingSessionLocal()
+        user = seed_user(db, "uidai_name@test.com")
+        raw_aadhaar = "999888777003"
+        ref = hash_aadhaar(raw_aadhaar)
+        uidai = UIDAIAadhaarMaster(
+            aadhaar_ref=ref,
+            aadhaar_masked="XXXX-XXXX-7003",
+            full_name="Maheshwar Dayal",
+            date_of_birth=datetime.date(1975, 5, 20),
+            gender="Male",
+            aadhaar_status="ACTIVE",
+            ekyc_eligible=True,
+        )
+        db.add(uidai)
+        db.commit()
+
+        _, details = seed_application(
+            db, user.id,
+            farmer_name="Ravi Kumar Gupta",  # Totally different name
+            aadhaar_ref=ref,
+            date_of_birth=datetime.date(1975, 5, 20),
+            gender="Male",
+        )
+        flags = identity_engine.run(details, db)
+        codes = [f.anomaly_code for f in flags]
+        assert "IDENTITY_NAME_MISMATCH_WITH_UIDAI" in codes
+        flag = next(f for f in flags if f.anomaly_code == "IDENTITY_NAME_MISMATCH_WITH_UIDAI")
+        assert flag.severity == "High"
+        assert flag.score == 40
+        db.close()
+
+    def test_uidai_dob_mismatch(self):
+        """DOB divergence > 2 years against UIDAI record → Medium severity flag."""
+        db = TestingSessionLocal()
+        user = seed_user(db, "uidai_dob@test.com")
+        raw_aadhaar = "999888777004"
+        ref = hash_aadhaar(raw_aadhaar)
+        uidai = UIDAIAadhaarMaster(
+            aadhaar_ref=ref,
+            aadhaar_masked="XXXX-XXXX-7004",
+            full_name="Pawan Kalyan",
+            date_of_birth=datetime.date(1970, 1, 1),
+            gender="Male",
+            aadhaar_status="ACTIVE",
+            ekyc_eligible=True,
+        )
+        db.add(uidai)
+        db.commit()
+
+        _, details = seed_application(
+            db, user.id,
+            farmer_name="Pawan Kalyan",
+            aadhaar_ref=ref,
+            date_of_birth=datetime.date(1995, 1, 1),  # 25 years younger
+            gender="Male",
+        )
+        flags = identity_engine.run(details, db)
+        codes = [f.anomaly_code for f in flags]
+        assert "IDENTITY_DOB_MISMATCH_WITH_UIDAI" in codes
+        flag = next(f for f in flags if f.anomaly_code == "IDENTITY_DOB_MISMATCH_WITH_UIDAI")
+        assert flag.severity == "Medium"
+        assert flag.score == 25
+        db.close()
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
