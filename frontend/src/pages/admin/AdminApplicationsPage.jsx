@@ -119,6 +119,16 @@ function QuickDossierDrawer({ app, onClose, onDecisionSuccess }) {
             </div>
           )}
 
+          {/* Deed OCR Mismatch Alert Banner (OCR-05) */}
+          {(app.ocr_match_status === 'MISMATCH' || (app.anomaly_flags || []).some(f => f.anomaly_code === 'LAND_DOC_ID_MISMATCH')) && (
+            <div className="border border-red-500 bg-red-50 p-3 font-mono text-xs text-red-900 flex items-center justify-between">
+              <span className="font-bold">📄 UPLOADED LAND DEED ID MISMATCH DETECTED</span>
+              <span className="stamp border border-red-600 bg-red-200 text-red-950 font-bold text-[10px]">
+                HIGH RISK OCR ALERT
+              </span>
+            </div>
+          )}
+
           {/* Metrics Rule */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
             <div className="border border-slate-200 p-3 bg-slate-50">
@@ -779,6 +789,16 @@ export default function AdminApplicationsPage() {
                     </div>
                   )}
 
+                  {/* Deed OCR Mismatch Alert (OCR-05) */}
+                  {(activeApp.ocr_match_status === 'MISMATCH' || (activeApp.anomaly_flags || []).some(f => f.anomaly_code === 'LAND_DOC_ID_MISMATCH')) && (
+                    <div className="border border-red-500 bg-red-50 p-2.5 font-mono text-xs text-red-900 flex items-center justify-between">
+                      <span className="font-bold">📄 UPLOADED LAND DEED ID MISMATCH DETECTED</span>
+                      <span className="stamp border border-red-600 bg-red-200 text-red-950 font-bold text-[10px]">
+                        DEED CONFLICT
+                      </span>
+                    </div>
+                  )}
+
                   {/* 4-Metric Score Cards */}
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 font-mono text-xs">
                     <div className="border border-slate-200 p-2.5 bg-slate-50">
@@ -1060,15 +1080,31 @@ export default function AdminApplicationsPage() {
                       </span>
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
-                      {flagCount > 0 ? (
-                        <span className="stamp border border-amber-400 bg-amber-50 text-amber-900 font-bold text-[10px]">
-                          {flagCount} FLAGS
-                        </span>
-                      ) : (
-                        <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-semibold">
-                          0 FLAGS
-                        </span>
-                      )}
+                      <div className="flex flex-col gap-1 items-start">
+                        {flagCount > 0 ? (
+                          <span className="stamp border border-amber-400 bg-amber-50 text-amber-900 font-bold text-[10px]">
+                            {flagCount} FLAGS
+                          </span>
+                        ) : (
+                          <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-semibold">
+                            0 FLAGS
+                          </span>
+                        )}
+                        {/* Deed OCR Verification Badge (OCR-05) */}
+                        {a.ocr_match_status === 'MISMATCH' || (a.anomaly_flags || []).some(f => f.anomaly_code === 'LAND_DOC_ID_MISMATCH') ? (
+                          <span className="stamp border border-red-500 bg-red-100 text-red-950 font-extrabold text-[9px] whitespace-nowrap">
+                            📄 DEED MISMATCH
+                          </span>
+                        ) : a.ocr_status === 'UNREADABLE' || (a.anomaly_flags || []).some(f => f.anomaly_code === 'LAND_DOC_OCR_UNREADABLE') ? (
+                          <span className="stamp border border-amber-500 bg-amber-100 text-amber-900 font-semibold text-[9px] whitespace-nowrap">
+                            📄 UNREADABLE SCAN
+                          </span>
+                        ) : a.ocr_match_status === 'MATCHED' ? (
+                          <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 font-semibold text-[9px] whitespace-nowrap">
+                            📄 OCR MATCHED
+                          </span>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="py-3 px-3 whitespace-nowrap">
                       <span className={`stamp text-[10px] ${st.color}`}>

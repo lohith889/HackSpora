@@ -25,6 +25,7 @@ export default function AdminApplicationDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showGraph, setShowGraph] = useState(false)
+  const [showRawOcrText, setShowRawOcrText] = useState(false)
 
   // Decision state
   const [decision, setDecision] = useState('')
@@ -115,6 +116,11 @@ export default function AdminApplicationDetailPage() {
   const divergence = app.anomaly_report?.divergence_score ?? app.divergence_score ?? (mlScore - ruleScore)
   const shapDrivers = app.anomaly_report?.ml_shap_drivers || []
 
+  // OCR Data Normalization (OCR-05)
+  const ocrData = typeof app.ocr_extracted_data === 'string'
+    ? (() => { try { return JSON.parse(app.ocr_extracted_data) } catch (e) { return {} } })()
+    : (app.ocr_extracted_data || {})
+
   // Check specific flags
   const flagCodes = new Set(flags.map(f => f.anomaly_code))
   const hasLandMismatch = flagCodes.has('LAND_AREA_DISCREPANCY') || flagCodes.has('LAND_OWNER_NAME_MISMATCH')
@@ -124,6 +130,8 @@ export default function AdminApplicationDetailPage() {
   const hasBankInactive = flagCodes.has('BANK_ACCOUNT_INACTIVE') || flagCodes.has('BANK_ACCOUNT_NOT_FOUND') || flagCodes.has('BANK_IFSC_INVALID')
   const hasTaxpayerFlag = flagCodes.has('EXCLUSION_TAXPAYER')
   const hasGovtEmpFlag = flagCodes.has('EXCLUSION_GOVT_EMPLOYEE')
+  const hasOcrMismatch = flagCodes.has('LAND_DOC_ID_MISMATCH') || app.ocr_match_status === 'MISMATCH'
+  const hasOcrUnreadable = flagCodes.has('LAND_DOC_OCR_UNREADABLE') || app.ocr_status === 'UNREADABLE'
 
   return (
     <div className="space-y-6 text-left font-sans">
@@ -557,6 +565,267 @@ export default function AdminApplicationDetailPage() {
               <span className="text-slate-900">{app.otp_verified ? 'Verified via SMS (Authenticated)' : 'Unverified'}</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── SECTION 1-B: Land Deed OCR Authenticity Dossier (OCR-05) ── */}
+      <div className="border border-slate-300 p-6 bg-white space-y-5 shadow-sm">
+        <div className="border-b border-slate-200 pb-3 flex flex-col sm:flex-row sm:items-baseline justify-between gap-2">
+          <div>
+            <div className="text-[10px] font-mono uppercase text-slate-500 font-semibold">
+              SCHEDULE I-B // DOCUMENT FORENSICS &amp; LAND DEED OCR RECONCILIATION
+            </div>
+            <h2 className="font-serif text-xl font-bold text-slate-900 mt-0.5">
+              Land Deed OCR Authenticity Dossier
+            </h2>
+            <p className="font-sans text-xs text-slate-600 mt-0.5">
+              Automated computer vision text extraction &amp; cross-verification of uploaded Bhulekh / Record-of-Rights deed against declared claims
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {app.land_document_path ? (
+              <a
+                href={app.land_document_path}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 border border-slate-300 hover:border-slate-800 bg-slate-50 hover:bg-white text-slate-800 px-3 py-1.5 font-mono text-xs font-semibold uppercase tracking-wider transition-colors shadow-sm"
+              >
+                <span>📄</span>
+                <span>View / Download Uploaded Deed ↗</span>
+              </a>
+            ) : (
+              <span className="font-mono text-xs text-slate-400 border border-dashed border-slate-300 px-2.5 py-1">
+                No Deed Attached
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* OCR Status Banner */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Main Status Badge Banner */}
+          <div className="md:col-span-2 border p-4 space-y-1.5 font-mono text-xs">
+            {app.ocr_match_status === 'MATCHED' ? (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="stamp border-2 border-emerald-600 bg-emerald-100 text-emerald-950 font-extrabold text-xs px-2.5 py-1">
+                    ✓ AUTOMATED OCR VERIFIED — PARCEL ID &amp; PLOT MATCH
+                  </span>
+                </div>
+                <p className="font-sans text-xs text-emerald-800 pt-1 leading-relaxed">
+                  The uploaded land record was successfully ingested by the OCR engine. Extracted parcel code, plot/khasra number, and ownership attributes reconcile with the applicant&apos;s declared PM-KISAN schedule.
+                </p>
+              </div>
+            ) : app.ocr_match_status === 'MISMATCH' ? (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="stamp border-2 border-red-600 bg-red-100 text-red-950 font-extrabold text-xs px-2.5 py-1">
+                    ⚠ FRAUD ALERT — LAND DEED ID MISMATCH DETECTED
+                  </span>
+                </div>
+                <p className="font-sans text-xs text-red-900 pt-1 leading-relaxed font-semibold">
+                  Discrepancy Warning: The parcel identification or plot number extracted from the uploaded deed does NOT match the PM-KISAN application claim. This indicates potential fabrication, recycled deeds, or misattributed revenue documents.
+                </p>
+              </div>
+            ) : app.ocr_status === 'UNREADABLE' ? (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="stamp border-2 border-amber-600 bg-amber-100 text-amber-950 font-extrabold text-xs px-2.5 py-1">
+                    ⚠ NOTICE — DOCUMENT TEXT ILLEGIBLE / MANUAL REVIEW REQUIRED
+                  </span>
+                </div>
+                <p className="font-sans text-xs text-amber-900 pt-1 leading-relaxed">
+                  The document scan quality was insufficient for automated character recognition or text streams were obfuscated. Officer must verify hardcopy or request a re-upload of certified digital Khatauni.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="stamp border border-slate-300 bg-slate-100 text-slate-800 font-bold text-xs px-2.5 py-1">
+                    DOCUMENT PENDING EXTRACTION / UNVERIFIED
+                  </span>
+                </div>
+                <p className="font-sans text-xs text-slate-600 pt-1">
+                  Document has not been processed through the automated optical extraction queue.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* OCR Confidence Gauge */}
+          <div className="border border-slate-200 p-4 bg-slate-50 font-mono text-xs flex flex-col justify-between space-y-2">
+            <div className="flex justify-between items-baseline">
+              <span className="text-slate-700 uppercase font-bold text-[11px]">OCR Extraction Confidence</span>
+              <span className="text-[10px] text-slate-500">Optical Certainty</span>
+            </div>
+            <div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-bold text-slate-900">
+                  {Math.round((app.ocr_confidence_score || 0) * 100)}%
+                </span>
+                <span className="text-slate-500 text-xs">certainty</span>
+              </div>
+              <div className="w-full bg-slate-200 h-2 mt-1.5 overflow-hidden">
+                <div
+                  className={`h-full transition-all ${
+                    (app.ocr_confidence_score || 0) >= 0.8
+                      ? 'bg-emerald-600'
+                      : (app.ocr_confidence_score || 0) >= 0.5
+                      ? 'bg-amber-500'
+                      : 'bg-red-500'
+                  }`}
+                  style={{ width: `${Math.min(100, Math.max(5, Math.round((app.ocr_confidence_score || 0) * 100)))}%` }}
+                />
+              </div>
+            </div>
+            <div className="font-sans text-[11px] text-slate-500 border-t border-slate-200 pt-1.5">
+              Engine: PyMuPDF / EasyOCR hybrid text stream parser
+            </div>
+          </div>
+        </div>
+
+        {/* Side-by-Side Reconciliation Table */}
+        <div className="border border-slate-200 overflow-x-auto">
+          <table className="w-full text-left font-mono text-xs">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-100 text-slate-700 uppercase text-[10px] tracking-wider">
+                <th className="py-2.5 px-4 font-semibold">Revenue Parameter</th>
+                <th className="py-2.5 px-4 font-semibold">Declared by Applicant</th>
+                <th className="py-2.5 px-4 font-semibold">Extracted from Deed (OCR)</th>
+                <th className="py-2.5 px-4 text-center font-semibold">Reconciliation State</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200 text-slate-900">
+              {/* Row 1: Parcel / Doc ID */}
+              <tr className="hover:bg-slate-50">
+                <td className="py-2.5 px-4 font-bold text-slate-800">Parcel / Document Code</td>
+                <td className="py-2.5 px-4 font-mono font-semibold">{app.parcel_id || '—'}</td>
+                <td className="py-2.5 px-4 font-mono">
+                  {ocrData?.doc_id || app.ocr_extracted_doc_id || <span className="text-slate-400 italic">Not detected</span>}
+                </td>
+                <td className="py-2.5 px-4 text-center">
+                  {app.ocr_match_status === 'MATCHED' ? (
+                    <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-bold">
+                      ✓ MATCH CONFIRMED
+                    </span>
+                  ) : app.ocr_match_status === 'MISMATCH' ? (
+                    <span className="stamp border border-red-300 bg-red-50 text-red-800 text-[10px] font-bold">
+                      ⚠ ID CONFLICT
+                    </span>
+                  ) : (
+                    <span className="stamp border border-slate-300 bg-slate-50 text-slate-600 text-[10px]">
+                      UNVERIFIED
+                    </span>
+                  )}
+                </td>
+              </tr>
+
+              {/* Row 2: Khatauni No */}
+              <tr className="hover:bg-slate-50">
+                <td className="py-2.5 px-4 font-bold text-slate-800">Khatauni / Khata No.</td>
+                <td className="py-2.5 px-4 font-mono">{app.khata_number || '—'}</td>
+                <td className="py-2.5 px-4 font-mono">
+                  {ocrData?.khata_number || <span className="text-slate-400 italic">Not detected</span>}
+                </td>
+                <td className="py-2.5 px-4 text-center">
+                  {ocrData?.khata_number && ocrData.khata_number.toString().trim() === String(app.khata_number || '').trim() ? (
+                    <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-bold">✓ MATCH</span>
+                  ) : ocrData?.khata_number ? (
+                    <span className="stamp border border-red-300 bg-red-50 text-red-800 text-[10px] font-bold">⚠ MISMATCH</span>
+                  ) : (
+                    <span className="stamp border border-slate-200 bg-slate-50 text-slate-500 text-[10px]">—</span>
+                  )}
+                </td>
+              </tr>
+
+              {/* Row 3: Plot / Khasra */}
+              <tr className="hover:bg-slate-50">
+                <td className="py-2.5 px-4 font-bold text-slate-800">Khasra / Plot No.</td>
+                <td className="py-2.5 px-4 font-mono">{app.plot_number || '—'}</td>
+                <td className="py-2.5 px-4 font-mono">
+                  {ocrData?.khasra_plot || <span className="text-slate-400 italic">Not detected</span>}
+                </td>
+                <td className="py-2.5 px-4 text-center">
+                  {ocrData?.khasra_plot && ocrData.khasra_plot.toString().trim() === String(app.plot_number || '').trim() ? (
+                    <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-bold">✓ MATCH</span>
+                  ) : ocrData?.khasra_plot ? (
+                    <span className="stamp border border-red-300 bg-red-50 text-red-800 text-[10px] font-bold">⚠ MISMATCH</span>
+                  ) : (
+                    <span className="stamp border border-slate-200 bg-slate-50 text-slate-500 text-[10px]">—</span>
+                  )}
+                </td>
+              </tr>
+
+              {/* Row 4: Land Area */}
+              <tr className="hover:bg-slate-50">
+                <td className="py-2.5 px-4 font-bold text-slate-800">Cultivable Area (Hectares)</td>
+                <td className="py-2.5 px-4 font-mono">{app.declared_land_area_ha ? `${app.declared_land_area_ha} Ha` : '—'}</td>
+                <td className="py-2.5 px-4 font-mono">
+                  {ocrData?.land_area_ha != null ? `${ocrData.land_area_ha} Ha` : <span className="text-slate-400 italic">Not detected</span>}
+                </td>
+                <td className="py-2.5 px-4 text-center">
+                  {ocrData?.land_area_ha != null && Math.abs(ocrData.land_area_ha - (app.declared_land_area_ha || 0)) < 0.05 ? (
+                    <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-bold">✓ ACCURATE</span>
+                  ) : ocrData?.land_area_ha != null ? (
+                    <span className="stamp border border-amber-300 bg-amber-50 text-amber-800 text-[10px] font-bold">⚠ VARIANCE</span>
+                  ) : (
+                    <span className="stamp border border-slate-200 bg-slate-50 text-slate-500 text-[10px]">—</span>
+                  )}
+                </td>
+              </tr>
+
+              {/* Row 5: Titleholder Name */}
+              <tr className="hover:bg-slate-50">
+                <td className="py-2.5 px-4 font-bold text-slate-800">Certified Titleholder Name</td>
+                <td className="py-2.5 px-4 font-sans font-semibold">{app.farmer_name || '—'}</td>
+                <td className="py-2.5 px-4 font-sans">
+                  {ocrData?.owner_name || <span className="text-slate-400 italic font-mono">Not detected</span>}
+                </td>
+                <td className="py-2.5 px-4 text-center">
+                  {ocrData?.owner_name ? (
+                    ocrData.owner_name.toLowerCase().includes((app.farmer_name || '').toLowerCase()) ||
+                    (app.farmer_name || '').toLowerCase().includes(ocrData.owner_name.toLowerCase()) ? (
+                      <span className="stamp border border-emerald-300 bg-emerald-50 text-emerald-800 text-[10px] font-bold">✓ TITLE CONFIRMED</span>
+                    ) : (
+                      <span className="stamp border border-red-300 bg-red-50 text-red-800 text-[10px] font-bold">⚠ NAME DIVERGENCE</span>
+                    )
+                  ) : (
+                    <span className="stamp border border-slate-200 bg-slate-50 text-slate-500 text-[10px]">—</span>
+                  )}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Collapsible Raw Extracted OCR Text Inspector */}
+        <div className="pt-1">
+          <button
+            type="button"
+            onClick={() => setShowRawOcrText(prev => !prev)}
+            className="flex items-center gap-2 text-xs font-mono text-slate-600 hover:text-slate-900 font-semibold"
+          >
+            <span>{showRawOcrText ? '▼' : '►'}</span>
+            <span className="underline">
+              {showRawOcrText ? 'Hide Raw Optical Extraction Stream' : 'Inspect Raw Optical Extraction Stream & Audit Text Buffer'}
+            </span>
+          </button>
+
+          {showRawOcrText && (
+            <div className="mt-3 p-4 bg-slate-900 text-emerald-400 font-mono text-xs rounded-none border border-slate-700 space-y-2 overflow-x-auto">
+              <div className="flex justify-between items-center text-slate-400 border-b border-slate-700 pb-1.5 text-[10px]">
+                <span>STREAM: OCR_NORMALIZED_TEXT_BUFFER</span>
+                <span>STATUS: {app.ocr_status || 'UNKNOWN'}</span>
+              </div>
+              <pre className="whitespace-pre-wrap leading-relaxed text-[11px] font-mono">
+                {ocrData?.raw_snippet || (
+                  app.ocr_extracted_data
+                    ? JSON.stringify(app.ocr_extracted_data, null, 2)
+                    : 'No optical text stream available for this document.'
+                )}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
 

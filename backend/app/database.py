@@ -30,6 +30,21 @@ def run_schema_migrations(target_engine=None):
                 if "ml_shap_drivers" not in columns:
                     conn.exec_driver_sql("ALTER TABLE anomaly_reports ADD COLUMN ml_shap_drivers JSON")
                 conn.commit()
+
+            cursor2 = conn.exec_driver_sql("PRAGMA table_info(pm_kisan_application_details)")
+            app_cols = [row[1] for row in cursor2.fetchall()]
+            if app_cols:
+                if "ocr_extracted_doc_id" not in app_cols:
+                    conn.exec_driver_sql("ALTER TABLE pm_kisan_application_details ADD COLUMN ocr_extracted_doc_id VARCHAR(150)")
+                if "ocr_status" not in app_cols:
+                    conn.exec_driver_sql("ALTER TABLE pm_kisan_application_details ADD COLUMN ocr_status VARCHAR(50) DEFAULT 'PENDING'")
+                if "ocr_match_status" not in app_cols:
+                    conn.exec_driver_sql("ALTER TABLE pm_kisan_application_details ADD COLUMN ocr_match_status VARCHAR(50) DEFAULT 'UNVERIFIED'")
+                if "ocr_confidence_score" not in app_cols:
+                    conn.exec_driver_sql("ALTER TABLE pm_kisan_application_details ADD COLUMN ocr_confidence_score FLOAT DEFAULT 0.0")
+                if "ocr_extracted_data" not in app_cols:
+                    conn.exec_driver_sql("ALTER TABLE pm_kisan_application_details ADD COLUMN ocr_extracted_data JSON")
+                conn.commit()
     except Exception:
         pass
 

@@ -12,7 +12,7 @@
 - [x] Phase 6: Admin Anomaly Review Console UI
 - [x] Phase 7: Master Seed Data & Live Demo Verification
 - [x] Phase 8: Supervised XGBoost Risk Calibration & SHAP Explainability Engine
-- [ ] Phase 9: Land Document OCR & Automated ID Verification
+- [x] Phase 9: Land Document OCR & Automated ID Verification
 
 | Phase | Name | Goal | Requirements | Criteria |
 |---|---|---|---|---|
@@ -129,7 +129,7 @@
 ### Phase 9: Land Document OCR & Automated ID Verification
 **Goal:** Implement automated, offline Land Document OCR to extract Document IDs, Khasra/Plot numbers, and Khata numbers from uploaded deeds (PDF/JPG/PNG), perform cross-reconciliation against application claims and land records, integrate with the Land Anomaly Engine, and display a comprehensive OCR Authenticity Dossier in the Scheme Officer Console.  
 **Mode:** mvp  
-**Status:** In Progress  
+**Status:** Complete ✓  
 **Requirements:** OCR-01, OCR-02, OCR-03, OCR-04, OCR-05  
 **Success Criteria:**
 1. `OCR-01`: Backend extracts textual content from digital PDFs (via `pymupdf` / `pypdf`) and raster images (via `Pillow` / `easyocr`) with sub-second latency and 100% offline execution.

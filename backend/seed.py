@@ -42,6 +42,63 @@ from app.services.risk_scorer import compute_risk_score, get_recommended_action
 from app.services.confidence_engine import compute_confidence
 from app.services.rationale_generator import generate_rationale
 from app.services.xgboost_risk_engine import evaluate_xgboost_risk
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+
+
+def generate_sample_land_deed_pdf(
+    file_path: str,
+    parcel_id: str,
+    khata: str,
+    plot: str,
+    owner_name: str,
+    area_ha: float,
+    mode: str = "MATCHED",
+):
+    """Generate an authentic-looking synthetic Bhulekh Khatauni RoR PDF in uploads/."""
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+    c = canvas.Canvas(file_path, pagesize=letter)
+    y = 750
+
+    if mode == "MATCHED":
+        lines = [
+            "GOVERNMENT OF UTTAR PRADESH — BOARD OF REVENUE",
+            "BHULEKH DIGITAL KHATAUNI RECORD OF RIGHTS (RoR)",
+            f"Document / Registration ID: DOC-UP-2024-{parcel_id.split('-')[-1].zfill(6)}",
+            f"Composite Parcel Code: {parcel_id}",
+            f"Khatauni Number: {khata}",
+            f"Khasra / Plot Number: {plot}",
+            f"Cultivable Land Area: {area_ha:.2f} Ha",
+            f"Bhumidhar / Titleholder Name: {owner_name}",
+            "Land Classification: AGRICULTURE / IRRIGATED FASLI",
+            "Status: ACTIVE / CLEAR TITLE",
+            "Issuing Authority: Office of Tehsildar & Sub-Divisional Magistrate",
+        ]
+    elif mode == "MISMATCH":
+        lines = [
+            "GOVERNMENT OF UTTAR PRADESH — BOARD OF REVENUE",
+            "BHULEKH DIGITAL KHATAUNI RECORD OF RIGHTS (RoR)",
+            "Document / Registration ID: DOC-UP-2024-999001",
+            "Composite Parcel Code: UP-BAR-FAT-V009-K999-P99",
+            "Khatauni Number: K999",
+            "Khasra / Plot Number: P99",
+            "Cultivable Land Area: 4.50 Ha",
+            "Bhumidhar / Titleholder Name: Shrimati Malti Devi",
+            "Land Classification: AGRICULTURE / IRRIGATED FASLI",
+            "Status: ACTIVE / CLEAR TITLE",
+            "Issuing Authority: Office of Tehsildar Barabanki",
+        ]
+    else:  # UNREADABLE
+        lines = [
+            "--- ILLEGIBLE SCAN ATTACHMENT / UNREADABLE LAND DEED ---",
+            "--- NO REVENUE MARKERS OR PARCEL IDENTIFIERS DETECTED ---",
+            "Please submit a clear, authenticated computer-generated Khatauni copy.",
+        ]
+
+    for line in lines:
+        c.drawString(72, y, line)
+        y -= 25
+    c.save()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -597,9 +654,10 @@ def seed_applications(db: SessionLocal, users: Dict[str, User]):
             "khata": "K055", "plot": "P055",
             "area": 0.70, "crop": "WHEAT",
             "otp_ok": True, "ekyc_ok": True,
+            "ocr_mode": "UNREADABLE",
             "status": "DOCUMENTS_REQUESTED",
             "decision": "REQUEST_DOCUMENTS",
-            "remarks": "Land area deviation of 40% detected against Khasra records. Requested updated Khasra Khatauni.",
+            "remarks": "Land area deviation of 40% detected and uploaded land deed scan is unreadable. Requested authenticated computer-generated Khatauni copy.",
         },
         # App 12: Inactive Land Ownership (DISPUTED/INACTIVE parcel in registry)
         {
@@ -637,7 +695,7 @@ def seed_applications(db: SessionLocal, users: Dict[str, User]):
             "decision": "REQUEST_DOCUMENTS",
             "remarks": "PFMS mock penny drop verification failed. Farmer requested to submit passbook photocopy.",
         },
-        # App 14: Mobile Shared on Multiple Applications (Bulk Mobile Medium)
+        # App 14: Document ID Mismatch & Mobile Shared on Multiple Applications
         {
             "id": 14,
             "farmer_name": "Hari Om",
@@ -651,8 +709,10 @@ def seed_applications(db: SessionLocal, users: Dict[str, User]):
             "khata": "K001", "plot": "P001",
             "area": 1.05, "crop": "WHEAT",
             "otp_ok": True, "ekyc_ok": True,
-            "status": "SUBMITTED",
-            "decision": None, "remarks": None,
+            "ocr_mode": "MISMATCH",
+            "status": "PAYMENT_HELD",
+            "decision": "HOLD",
+            "remarks": "Deed Mismatch: Uploaded deed certifies DOC-UP-2024-999001 (Barabanki P99), conflicting with declared Lucknow parcel.",
         },
         # App 15: Statistical Village Density Spike (Village VIL091 has baseline of 1)
         {
@@ -818,7 +878,55 @@ def seed_applications(db: SessionLocal, users: Dict[str, User]):
             e_kyc_status=spec["ekyc_ok"],
             parcel_id=p_id,
             bank_account_ifsc_key=b_key,
+            ocr_extracted_doc_id=(
+                p_id if spec.get("ocr_mode", "MATCHED") == "MATCHED"
+                else ("UP-BAR-FAT-V009-K999-P99" if spec.get("ocr_mode") == "MISMATCH" else None)
+            ),
+            ocr_status=(
+                "UNREADABLE" if spec.get("ocr_mode") == "UNREADABLE" else "SUCCESS"
+            ),
+            ocr_match_status=(
+                spec.get("ocr_mode", "MATCHED") if spec.get("ocr_mode") != "UNREADABLE" else "UNVERIFIED"
+            ),
+            ocr_confidence_score=(
+                0.98 if spec.get("ocr_mode", "MATCHED") == "MATCHED"
+                else (0.92 if spec.get("ocr_mode") == "MISMATCH" else 0.10)
+            ),
+            ocr_extracted_data=(
+                {
+                    "doc_id": p_id,
+                    "khata_number": spec["khata"],
+                    "khasra_plot": spec["plot"],
+                    "land_area_ha": spec["area"],
+                    "owner_name": spec["farmer_name"],
+                    "raw_snippet": f"UP BHULEKH DIGITAL RoR: Parcel Code {p_id}, Khata {spec['khata']}, Plot {spec['plot']}, Owner {spec['farmer_name']}.",
+                } if spec.get("ocr_mode", "MATCHED") == "MATCHED"
+                else (
+                    {
+                        "doc_id": "UP-BAR-FAT-V009-K999-P99",
+                        "khata_number": "K999",
+                        "khasra_plot": "P99",
+                        "land_area_ha": 4.50,
+                        "owner_name": "Shrimati Malti Devi",
+                        "raw_snippet": "UP BHULEKH DIGITAL RoR: Parcel Code UP-BAR-FAT-V009-K999-P99, Khata K999, Plot P99, Owner Shrimati Malti Devi.",
+                    } if spec.get("ocr_mode") == "MISMATCH"
+                    else {"raw_snippet": "--- ILLEGIBLE SCAN ATTACHMENT / UNREADABLE LAND DEED ---"}
+                )
+            ),
         )
+
+        # Generate physical sample PDF in uploads directory
+        pdf_path = os.path.join(BASE_DIR, "uploads", f"seed_deed_app_{spec['id']}.pdf")
+        generate_sample_land_deed_pdf(
+            file_path=pdf_path,
+            parcel_id=p_id,
+            khata=spec["khata"],
+            plot=spec["plot"],
+            owner_name=spec["farmer_name"],
+            area_ha=spec["area"],
+            mode=spec.get("ocr_mode", "MATCHED"),
+        )
+
         db.add(details)
         db.flush()
 
