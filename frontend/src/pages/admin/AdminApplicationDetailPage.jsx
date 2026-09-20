@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { adminAPI } from '../../api/client'
 import {
   getRiskTier, getStatusBadge, SEVERITY_COLORS,
   formatDate, formatDateTime
 } from '../../utils/adminUtils'
 import Spinner from '../../components/Spinner'
+import SyndicateGraphPanel from '../../components/SyndicateGraphPanel'
 
 // ── Decision Options (ADM-05) ────────────────────────────────────────────────
 const DECISION_OPTIONS = [
@@ -18,10 +19,12 @@ const DECISION_OPTIONS = [
 
 export default function AdminApplicationDetailPage() {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [app, setApp] = useState(null)
   const [auditLogs, setAuditLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showGraph, setShowGraph] = useState(false)
 
   // Decision state
   const [decision, setDecision] = useState('')
@@ -377,6 +380,48 @@ export default function AdminApplicationDetailPage() {
           </div>
         </div>
       )}
+
+      {/* ── Interactive Syndicate & Fraud Ring Investigation Panel ── */}
+      <div className="border border-slate-300 bg-white shadow-sm">
+        {/* Section Header / Toggle Button */}
+        <button
+          onClick={() => setShowGraph(g => !g)}
+          className="w-full flex items-center justify-between px-5 py-3.5 text-left hover:bg-slate-50 transition-colors border-b border-slate-200 group"
+        >
+          <div className="flex items-center gap-3">
+            {/* Tri-color accent dot */}
+            <span className="flex gap-0.5">
+              <span className="w-2 h-2 rounded-full bg-[#f97316]" />
+              <span className="w-2 h-2 rounded-full bg-white border border-slate-300" />
+              <span className="w-2 h-2 rounded-full bg-[#16a34a]" />
+            </span>
+            <div>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-slate-500 font-semibold block">ENG-08 // FORENSIC GRAPH INTELLIGENCE</span>
+              <span className="font-serif text-base font-bold text-slate-900">
+                Syndicate &amp; Fraud Ring Radar
+              </span>
+            </div>
+            {hasDuplicateClaim && (
+              <span className="font-mono text-[10px] px-2 py-0.5 border border-rose-400 bg-rose-50 text-rose-800 font-bold uppercase">
+                ⚠ Ring Pattern Detected
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-500 group-hover:text-slate-800 transition-colors">
+            <span>{showGraph ? 'COLLAPSE ▲' : 'OPEN INVESTIGATION ▼'}</span>
+          </div>
+        </button>
+
+        {/* Collapsible Graph Panel */}
+        {showGraph && (
+          <div className="border-t border-slate-200">
+            <SyndicateGraphPanel
+              applicationId={app.id}
+              onOpenApplication={(targetId) => navigate(`/admin/applications/${targetId}`)}
+            />
+          </div>
+        )}
+      </div>
 
       {/* AI Rationale Summary Banner */}
       {app.anomaly_report?.rationale && (

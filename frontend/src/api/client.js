@@ -46,6 +46,8 @@ export const adminAPI = {
   evaluationMetrics: () => api.get('/admin/evaluation/metrics'),
   // Audit logs
   getAuditLogs: (params = {}) => api.get('/admin/audit-logs', { params }),
+  // Sentinel fraud ring network
+  getSentinelNetwork: (params = {}) => api.get('/admin/sentinel/network', { params }),
 }
 
 export default api
