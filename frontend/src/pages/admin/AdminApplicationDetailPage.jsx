@@ -116,10 +116,11 @@ export default function AdminApplicationDetailPage() {
   const divergence = app.anomaly_report?.divergence_score ?? app.divergence_score ?? (mlScore - ruleScore)
   const shapDrivers = app.anomaly_report?.ml_shap_drivers || []
 
-  // OCR Data Normalization (OCR-05)
+  // OCR Data Normalization (OCR-05) & Government SRO Central Registry
   const ocrData = typeof app.ocr_extracted_data === 'string'
     ? (() => { try { return JSON.parse(app.ocr_extracted_data) } catch (e) { return {} } })()
     : (app.ocr_extracted_data || {})
+  const govtRegistry = ocrData?.govt_registry || null
 
   // Check specific flags
   const flagCodes = new Set(flags.map(f => f.anomaly_code))
@@ -132,6 +133,8 @@ export default function AdminApplicationDetailPage() {
   const hasGovtEmpFlag = flagCodes.has('EXCLUSION_GOVT_EMPLOYEE')
   const hasOcrMismatch = flagCodes.has('LAND_DOC_ID_MISMATCH') || app.ocr_match_status === 'MISMATCH'
   const hasOcrUnreadable = flagCodes.has('LAND_DOC_OCR_UNREADABLE') || app.ocr_status === 'UNREADABLE'
+  const hasGovtDeedRevoked = flagCodes.has('LAND_DOC_GOVT_DEED_REVOKED') || govtRegistry?.status === 'REVOKED'
+  const hasGovtDeedNotFound = flagCodes.has('LAND_DOC_NOT_IN_GOVT_REGISTRY') || govtRegistry?.status === 'NOT_FOUND'
 
   return (
     <div className="space-y-6 text-left font-sans">
@@ -796,6 +799,99 @@ export default function AdminApplicationDetailPage() {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        {/* Government Central Deed Registry Reconciliation (IGRS / SRO Archives) */}
+        <div className="border border-slate-300 p-5 bg-slate-50 space-y-4 shadow-sm">
+          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between border-b border-slate-200 pb-3 gap-2">
+            <div className="flex items-center gap-2">
+              <span className="text-base">🏛️</span>
+              <div>
+                <span className="text-[10px] font-mono uppercase text-slate-500 font-semibold block">
+                  REGISTRATION &amp; STAMPS (IGRS) // GOVERNMENT LAND DEED ARCHIVE
+                </span>
+                <h3 className="font-serif text-base font-bold text-slate-900">
+                  Government Central Land Deed Registry Reconciliation
+                </h3>
+              </div>
+            </div>
+
+            {/* Official Registry Reconciliation Badge */}
+            {govtRegistry?.status === 'VERIFIED' ? (
+              <span className="stamp border-2 border-emerald-600 bg-emerald-100 text-emerald-950 font-extrabold text-xs px-2.5 py-1">
+                ✓ VERIFIED IN GOVERNMENT SRO ARCHIVE
+              </span>
+            ) : govtRegistry?.status === 'MISMATCH' ? (
+              <span className="stamp border-2 border-red-600 bg-red-100 text-red-950 font-extrabold text-xs px-2.5 py-1">
+                ⚠ TITLE / PARCEL DIVERGENCE IN GOVT RECORDS
+              </span>
+            ) : govtRegistry?.status === 'REVOKED' ? (
+              <span className="stamp border-2 border-red-700 bg-red-200 text-red-950 font-extrabold text-xs px-2.5 py-1">
+                ⚠ DEED REVOKED OR CANCELLED IN SRO ARCHIVE
+              </span>
+            ) : govtRegistry?.status === 'NOT_FOUND' ? (
+              <span className="stamp border-2 border-amber-600 bg-amber-100 text-amber-950 font-extrabold text-xs px-2.5 py-1">
+                ⚠ UNRECORDED DEED — ABSENT IN GOVERNMENT SRO ARCHIVE
+              </span>
+            ) : (
+              <span className="stamp border border-slate-300 bg-slate-200 text-slate-800 font-semibold text-xs px-2.5 py-1">
+                GOVERNMENT ARCHIVE PENDING CROSS-CHECK
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 font-mono text-xs">
+            <div className="border border-slate-200 p-3 bg-white space-y-1 shadow-sm">
+              <span className="text-[10px] text-slate-500 uppercase block font-semibold">Government Deed Number</span>
+              <span className="font-bold text-slate-900 block text-[13px] truncate">
+                {govtRegistry?.document_number || ocrData?.document_number || app.ocr_extracted_doc_id || '—'}
+              </span>
+              <span className="text-[10px] text-slate-500">Instrument: {govtRegistry?.deed_type || 'SALE_DEED'}</span>
+            </div>
+
+            <div className="border border-slate-200 p-3 bg-white space-y-1 shadow-sm">
+              <span className="text-[10px] text-slate-500 uppercase block font-semibold">Sub-Registrar Office (SRO)</span>
+              <span className="font-bold text-slate-900 block text-xs truncate">
+                {govtRegistry?.sro_office || 'State SRO Archive Directory'}
+              </span>
+              <span className="text-[10px] text-slate-500">
+                Reg Date: {govtRegistry?.registration_date ? formatDate(govtRegistry.registration_date) : 'On file'}
+              </span>
+            </div>
+
+            <div className="border border-slate-200 p-3 bg-white space-y-1 shadow-sm">
+              <span className="text-[10px] text-slate-500 uppercase block font-semibold">Govt Registered Titleholder</span>
+              <span className={`font-bold block text-xs truncate ${govtRegistry?.status === 'MISMATCH' ? 'text-red-700' : 'text-slate-900'}`}>
+                {govtRegistry?.registered_owner || '—'}
+              </span>
+              <span className="text-[10px] text-slate-500">
+                Claimant: {app.farmer_name}
+              </span>
+            </div>
+
+            <div className="border border-slate-200 p-3 bg-white space-y-1 shadow-sm">
+              <span className="text-[10px] text-slate-500 uppercase block font-semibold">Govt Registered Parcel</span>
+              <span className={`font-bold block text-xs truncate ${govtRegistry?.status === 'MISMATCH' ? 'text-red-700' : 'text-slate-900'}`}>
+                {govtRegistry?.registered_parcel_id || '—'}
+              </span>
+              <span className="text-[10px] text-slate-500">
+                Deed Status: {govtRegistry?.deed_status || 'REGISTERED'}
+              </span>
+            </div>
+          </div>
+
+          <div className="border-l-2 border-slate-700 pl-3 py-1.5 font-mono text-[11px] text-slate-700 bg-white/70">
+            <strong>RECONCILIATION AUDIT NOTE: </strong>
+            <span>
+              {govtRegistry?.details_message || (
+                app.ocr_match_status === 'MATCHED'
+                  ? `Extracted deed record authenticated against Government Central Land Deed Registry (${govtRegistry?.sro_office || 'State SRO'}). Legal title and parcel coordinates reconcile.`
+                  : app.ocr_match_status === 'MISMATCH'
+                  ? 'Title divergence warning: Uploaded deed record contradicts official state revenue records or belongs to a different titleholder.'
+                  : 'Awaiting formal optical resolution against Sub-Registrar records.'
+              )}
+            </span>
+          </div>
         </div>
 
         {/* Collapsible Raw Extracted OCR Text Inspector */}

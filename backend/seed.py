@@ -30,6 +30,7 @@ from app.models import (
     AnomalyReport,
     AnomalyFlag,
     LandRecordMaster,
+    LandDeedRegistryMaster,
     BankValidationMaster,
     ExclusionMaster,
     VillageProfileMaster,
@@ -44,6 +45,14 @@ from app.services.rationale_generator import generate_rationale
 from app.services.xgboost_risk_engine import evaluate_xgboost_risk
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
+
+
+def make_deed_number(parcel_id: str) -> str:
+    """Generate deterministic, unique government registration deed ID for a parcel."""
+    parts = parcel_id.split('-')
+    if len(parts) >= 6:
+        return f"DOC-UP-2024-{parts[3]}-{parts[4]}-{parts[5]}"
+    return f"DOC-UP-2024-{parcel_id.replace('-', '')[-8:]}"
 
 
 def generate_sample_land_deed_pdf(
@@ -61,10 +70,11 @@ def generate_sample_land_deed_pdf(
     y = 750
 
     if mode == "MATCHED":
+        doc_num = make_deed_number(parcel_id)
         lines = [
             "GOVERNMENT OF UTTAR PRADESH — BOARD OF REVENUE",
             "BHULEKH DIGITAL KHATAUNI RECORD OF RIGHTS (RoR)",
-            f"Document / Registration ID: DOC-UP-2024-{parcel_id.split('-')[-1].zfill(6)}",
+            f"Document / Registration ID: {doc_num}",
             f"Composite Parcel Code: {parcel_id}",
             f"Khatauni Number: {khata}",
             f"Khasra / Plot Number: {plot}",
@@ -216,6 +226,122 @@ def seed_land_records(db: SessionLocal):
             title_status=p[13],
         )
         db.add(rec)
+    db.commit()
+
+
+def seed_land_deed_registry(db: SessionLocal):
+    """Seed 28 government central land deed records (SRO Archive / LandDeedRegistryMaster)."""
+    print("  -> Seeding Government Land Deed Registry Master (28 records)...")
+    db.query(LandDeedRegistryMaster).delete()
+
+    parcels = [
+        # (parcel_id, state, dist, tehsil, village, khata, plot, aadhaar, owner, area, sro, status, type)
+        ("UP-MRT-HAP-VIL001-K001-P001", "UP", "MRT", "HAP", "VIL001", "K001", "P001", "100000000001", "Ramesh Kumar", 1.25, "SRO Hapur - Central Division", "REGISTERED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL001-K001-P002", "UP", "MRT", "HAP", "VIL001", "K001", "P002", "100000000002", "Suresh Patel", 0.95, "SRO Hapur - Central Division", "REGISTERED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL001-K002-P001", "UP", "MRT", "HAP", "VIL001", "K002", "P001", "100000000003", "Anita Devi", 1.80, "SRO Hapur - Central Division", "REGISTERED", "INHERITANCE_ROR"),
+        ("UP-MRT-HAP-VIL002-K001-P001", "UP", "MRT", "HAP", "VIL002", "K001", "P001", "100000000004", "Vikram Singh", 2.10, "SRO Hapur - Tehsil Circle", "REGISTERED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL002-K002-P002", "UP", "MRT", "HAP", "VIL002", "K002", "P002", "100000000005", "Sunita Sharma", 1.40, "SRO Hapur - Tehsil Circle", "REGISTERED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL003-K001-P001", "UP", "MRT", "HAP", "VIL003", "K001", "P001", "100000000006", "Mohan Lal", 0.75, "SRO Meerut - Cantt Sub-Registrar", "REGISTERED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL003-K002-P001", "UP", "MRT", "HAP", "VIL003", "K002", "P001", "100000000007", "Geeta Verma", 1.15, "SRO Meerut - Cantt Sub-Registrar", "REGISTERED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL004-K001-P001", "UP", "MRT", "HAP", "VIL004", "K001", "P001", "100000000008", "Rajesh Gupta", 1.50, "SRO Meerut - Sadar SRO-II", "REGISTERED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL004-K001-P002", "UP", "MRT", "HAP", "VIL004", "K001", "P002", "100000000009", "Pooja Yadav", 0.85, "SRO Meerut - Sadar SRO-II", "REGISTERED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL005-K001-P001", "UP", "MRT", "HAP", "VIL005", "K001", "P001", "10000000010", "Dinesh Chandra", 2.40, "SRO Hapur - East Division", "REGISTERED", "SALE_DEED"),
+        ("UP-AGR-FAT-VIL006-K001-P001", "UP", "AGR", "FAT", "VIL006", "K001", "P001", "10000000011", "Kavita Rani", 1.60, "SRO Fatehpur Sikri - Agra", "REGISTERED", "SALE_DEED"),
+        ("UP-AGR-FAT-VIL006-K002-P001", "UP", "AGR", "FAT", "VIL006", "K002", "P001", "10000000012", "Santosh Tiwari", 1.10, "SRO Fatehpur Sikri - Agra", "REGISTERED", "SALE_DEED"),
+        ("UP-AGR-FAT-VIL007-K001-P001", "UP", "AGR", "FAT", "VIL007", "K001", "P001", "10000000013", "Meena Kumari", 0.65, "SRO Agra - Sadar Central", "REGISTERED", "SALE_DEED"),
+        ("UP-AGR-FAT-VIL007-K002-P001", "UP", "AGR", "FAT", "VIL007", "K002", "P001", "10000000014", "Deepak Rawat", 1.90, "SRO Agra - Sadar Central", "REGISTERED", "SALE_DEED"),
+        ("UP-AGR-FAT-VIL008-K001-P001", "UP", "AGR", "FAT", "VIL008", "K001", "P001", "10000000015", "Shanti Devi", 1.30, "SRO Agra - Sadar Central", "REGISTERED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL001-K099-P099", "UP", "MRT", "HAP", "VIL001", "K099", "P099", "10000000016", "Anil Aggarwal", 3.50, "SRO Hapur - Commercial Zone", "REGISTERED", "COMMERCIAL_LEASE"),
+        ("UP-AGR-FAT-VIL006-K088-P088", "UP", "AGR", "FAT", "VIL006", "K088", "P088", "10000000017", "Bharat Builders", 4.20, "SRO Fatehpur Sikri - Agra", "REGISTERED", "DEVELOPMENT_AGREEMENT"),
+        ("UP-MRT-HAP-VIL002-K077-P077", "UP", "MRT", "HAP", "VIL002", "K077", "P077", "10000000018", "Raghuveer Saran", 1.50, "SRO Hapur - Division II", "DISPUTED", "PARTITION_DEED"),
+        ("UP-AGR-FAT-VIL007-K066-P066", "UP", "AGR", "FAT", "VIL007", "K066", "P066", "10000000019", "Madan Mohan", 2.00, "SRO Agra - Sadar Central", "REVOKED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL003-K055-P055", "UP", "MRT", "HAP", "VIL003", "K055", "P055", "10000000020", "Govind Prasad", 0.50, "SRO Meerut - Cantt", "REGISTERED", "SALE_DEED"),
+        ("UP-MRT-HAP-VIL001-K044-P044", "UP", "MRT", "HAP", "VIL001", "K044", "P044", "10000000021", "Om Prakash", 1.75, "SRO Hapur - Central", "REGISTERED", "SALE_DEED"),
+        ("UP-LKO-BAK-VIL009-K001-P001", "UP", "LKO", "BAK", "VIL009", "K001", "P001", "10000000022", "Hari Om", 1.05, "SRO Lucknow - Bakshi Ka Talab", "REGISTERED", "SALE_DEED"),
+        ("UP-LKO-BAK-VIL009-K002-P001", "UP", "LKO", "BAK", "VIL009", "K002", "P001", "10000000023", "Radha Krishna", 0.80, "SRO Lucknow - Bakshi Ka Talab", "REGISTERED", "SALE_DEED"),
+        ("UP-LKO-BAK-VIL010-K001-P001", "UP", "LKO", "BAK", "VIL010", "K001", "P001", "10000000024", "Kamla Devi", 1.45, "SRO Lucknow - Bakshi Ka Talab", "REGISTERED", "SALE_DEED"),
+        ("UP-LKO-BAK-VIL010-K002-P001", "UP", "LKO", "BAK", "VIL010", "K002", "P001", "10000000025", "Nand Kishore", 2.20, "SRO Lucknow - Bakshi Ka Talab", "REGISTERED", "SALE_DEED"),
+    ]
+
+    for i, p in enumerate(parcels, 1):
+        doc_num = make_deed_number(p[0])
+        rec = LandDeedRegistryMaster(
+            document_number=doc_num,
+            parcel_id=p[0],
+            state_code=p[1],
+            district_code=p[2],
+            tehsil_code=p[3],
+            village_code=p[4],
+            khata_number=p[5],
+            plot_number=p[6],
+            owner_name=p[8],
+            owner_aadhaar_ref=hash_aadhaar(p[7]),
+            land_area_ha=p[9],
+            registration_date=datetime.date(2022, 1, 15) + datetime.timedelta(days=i * 22),
+            sub_registrar_office=p[10],
+            deed_status=p[11],
+            deed_type=p[12],
+        )
+        db.add(rec)
+
+    # Special Fraud / Anomaly Deeds in Government Registry:
+    # 1. Hari Om Mismatch Deed (DOC-UP-2024-999001 belongs to Shrimati Malti Devi in Barabanki!)
+    db.add(LandDeedRegistryMaster(
+        document_number="DOC-UP-2024-999001",
+        parcel_id="UP-BAR-FAT-V009-K999-P99",
+        state_code="UP",
+        district_code="BAR",
+        tehsil_code="FAT",
+        village_code="V009",
+        khata_number="K999",
+        plot_number="P99",
+        owner_name="Shrimati Malti Devi",
+        owner_aadhaar_ref=hash_aadhaar("999900001111"),
+        land_area_ha=4.50,
+        registration_date=datetime.date(2021, 5, 18),
+        sub_registrar_office="SRO Barabanki - Fatehpur Division",
+        deed_status="REGISTERED",
+        deed_type="SALE_DEED",
+    ))
+
+    # 2. Test Deed for unit test suites (DOC-UP-2024-884920)
+    db.add(LandDeedRegistryMaster(
+        document_number="DOC-UP-2024-884920",
+        parcel_id="UP-LKO-MAL-V001-K102-P45",
+        state_code="UP",
+        district_code="LKO",
+        tehsil_code="MAL",
+        village_code="V001",
+        khata_number="102",
+        plot_number="45",
+        owner_name="Ramesh Kumar",
+        owner_aadhaar_ref=hash_aadhaar("100000000001"),
+        land_area_ha=1.85,
+        registration_date=datetime.date(2022, 8, 14),
+        sub_registrar_office="SRO Malihabad - Lucknow Division",
+        deed_status="REGISTERED",
+        deed_type="SALE_DEED",
+    ))
+
+    # 3. Explicitly Revoked Deed (DOC-UP-2023-REV001)
+    db.add(LandDeedRegistryMaster(
+        document_number="DOC-UP-2023-REV001",
+        parcel_id="UP-MRT-HAP-VIL002-K077-P077",
+        state_code="UP",
+        district_code="MRT",
+        tehsil_code="HAP",
+        village_code="VIL002",
+        khata_number="K077",
+        plot_number="P077",
+        owner_name="Raghuveer Saran",
+        owner_aadhaar_ref=hash_aadhaar("100000000018"),
+        land_area_ha=1.50,
+        registration_date=datetime.date(2019, 3, 10),
+        sub_registrar_office="SRO Hapur - Division II",
+        deed_status="REVOKED",
+        deed_type="PARTITION_DEED",
+    ))
+
     db.commit()
 
 
@@ -902,22 +1028,59 @@ def seed_applications(db: SessionLocal, users: Dict[str, User]):
             ocr_extracted_data=(
                 {
                     "doc_id": p_id,
+                    "document_number": make_deed_number(p_id),
+                    "parcel_id": p_id,
                     "khata_number": spec["khata"],
                     "khasra_plot": spec["plot"],
                     "land_area_ha": spec["area"],
                     "owner_name": spec["farmer_name"],
-                    "raw_snippet": f"UP BHULEKH DIGITAL RoR: Parcel Code {p_id}, Khata {spec['khata']}, Plot {spec['plot']}, Owner {spec['farmer_name']}.",
+                    "raw_snippet": f"UP BHULEKH DIGITAL RoR: Document ID {make_deed_number(p_id)}, Parcel Code {p_id}, Khata {spec['khata']}, Plot {spec['plot']}, Owner {spec['farmer_name']}.",
+                    "govt_registry": {
+                        "status": "VERIFIED",
+                        "document_number": make_deed_number(p_id),
+                        "registered_parcel_id": p_id,
+                        "registered_owner": spec["farmer_name"],
+                        "land_area_ha": spec["area"],
+                        "sro_office": f"SRO {spec['district']} - Division {spec['tehsil']}",
+                        "registration_date": "2022-09-14",
+                        "deed_status": "REGISTERED",
+                        "deed_type": "SALE_DEED",
+                        "name_match_pct": 100,
+                        "details_message": f"Official Government Verification Confirmed: Registered in SRO {spec['district']} under REGISTERED status.",
+                    },
                 } if spec.get("ocr_mode", "MATCHED") == "MATCHED"
                 else (
                     {
                         "doc_id": "UP-BAR-FAT-V009-K999-P99",
+                        "document_number": "DOC-UP-2024-999001",
+                        "parcel_id": "UP-BAR-FAT-V009-K999-P99",
                         "khata_number": "K999",
                         "khasra_plot": "P99",
                         "land_area_ha": 4.50,
                         "owner_name": "Shrimati Malti Devi",
-                        "raw_snippet": "UP BHULEKH DIGITAL RoR: Parcel Code UP-BAR-FAT-V009-K999-P99, Khata K999, Plot P99, Owner Shrimati Malti Devi.",
+                        "raw_snippet": "UP BHULEKH DIGITAL RoR: Document ID DOC-UP-2024-999001, Parcel Code UP-BAR-FAT-V009-K999-P99, Khata K999, Plot P99, Owner Shrimati Malti Devi.",
+                        "govt_registry": {
+                            "status": "MISMATCH",
+                            "document_number": "DOC-UP-2024-999001",
+                            "registered_parcel_id": "UP-BAR-FAT-V009-K999-P99",
+                            "registered_owner": "Shrimati Malti Devi",
+                            "land_area_ha": 4.50,
+                            "sro_office": "SRO Barabanki - Fatehpur Division",
+                            "registration_date": "2021-05-18",
+                            "deed_status": "REGISTERED",
+                            "deed_type": "SALE_DEED",
+                            "name_match_pct": 12,
+                            "details_message": f"Title Divergence: Government Deed 'DOC-UP-2024-999001' belongs to 'Shrimati Malti Devi' (Parcel: UP-BAR-FAT-V009-K999-P99), contradicting applicant '{spec['farmer_name']}'.",
+                        },
                     } if spec.get("ocr_mode") == "MISMATCH"
-                    else {"raw_snippet": "--- ILLEGIBLE SCAN ATTACHMENT / UNREADABLE LAND DEED ---"}
+                    else {
+                        "raw_snippet": "--- ILLEGIBLE SCAN ATTACHMENT / UNREADABLE LAND DEED ---",
+                        "govt_registry": {
+                            "status": "NOT_EXTRACTABLE",
+                            "document_number": None,
+                            "details_message": "Document scan illegible; automated registration resolution unavailable.",
+                        },
+                    }
                 )
             ),
         )
@@ -1018,8 +1181,8 @@ def main():
     print("=" * 70)
 
     # Initialize tables
-    Base.metadata.create_all(bind=engine)
     run_schema_migrations(engine)
+    Base.metadata.create_all(bind=engine)
 
     # Ensure uploads directory
     uploads_dir = os.path.join(BASE_DIR, "uploads")
@@ -1029,6 +1192,7 @@ def main():
     try:
         users = seed_users(db)
         seed_land_records(db)
+        seed_land_deed_registry(db)
         seed_bank_records(db)
         seed_exclusion_master(db)
         seed_village_profiles(db)

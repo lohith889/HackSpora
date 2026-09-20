@@ -162,32 +162,34 @@ def parse_land_entities(text: str) -> Dict[str, Any]:
     normalized = " ".join(text.split())
     raw_snippet = text[:1000].strip()
 
-    doc_id = None
+    document_number = None
+    parcel_code = None
     khasra_plot = None
     khata_number = None
     land_area_ha = None
     owner_name = None
 
-    # 1. Standard Composite Parcel ID pattern (e.g., UP-LKO-MAL-V001-K102-P45)
+    # 1. Document / Registration / Deed Number pattern (e.g., DOC-UP-2024-001001, REG/2024/99)
+    doc_regexes = [
+        r"(?:Document|Registration|Reg|Certificate|Deed|RoR|Bhulekh\s*Record)\s*(?:No\.?|Number|ID|Ref|Code)?\s*[:\-#]?\s*([A-Z0-9\-\/]{6,35})",
+        r"\b((?:DOC|REG|ROR|DEED|CERT)[\s\-_:/#]*[A-Z0-9\-_/]{6,30})\b",
+    ]
+    for pattern in doc_regexes:
+        match = re.search(pattern, normalized, re.IGNORECASE)
+        if match:
+            candidate = match.group(1).strip().replace(" ", "").upper()
+            if not any(candidate.startswith(k) for k in ["NUMBER", "DATE", "NAME", "VILLAGE"]):
+                document_number = candidate
+                break
+
+    # 1b. Standard Composite Parcel ID pattern (e.g., UP-LKO-MAL-V001-K102-P45)
     parcel_regex = r"\b((?:UP|MH|MP|RJ|PB|HR|GJ|KA|TN|AP|TS|BR|WB)-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+-[A-Z0-9]+)\b"
     parcel_match = re.search(parcel_regex, normalized, re.IGNORECASE)
     if parcel_match:
-        doc_id = parcel_match.group(1).upper()
+        parcel_code = parcel_match.group(1).upper()
 
-    # 1b. Document / Registration / Deed Number pattern if direct parcel ID not found
-    if not doc_id:
-        doc_regexes = [
-            r"(?:Document|Registration|Reg|Certificate|Deed|RoR|Bhulekh\s*Record)\s*(?:No\.?|Number|ID|Ref|Code)?\s*[:\-#]?\s*([A-Z0-9\-\/]{6,35})",
-            r"\b((?:DOC|REG|ROR|DEED|CERT)[\s\-_:/#]*[A-Z0-9\-_/]{6,30})\b",
-        ]
-        for pattern in doc_regexes:
-            match = re.search(pattern, normalized, re.IGNORECASE)
-            if match:
-                candidate = match.group(1).strip().replace(" ", "").upper()
-                # filter out obvious keywords
-                if not any(candidate.startswith(k) for k in ["NUMBER", "DATE", "NAME", "VILLAGE"]):
-                    doc_id = candidate
-                    break
+    # Composite doc_id for backward compatibility: parcel_code if found, else document_number
+    doc_id = parcel_code if parcel_code else document_number
 
     stopwords = {"EXTRACT", "RECORD", "SYSTEM", "DETAILS", "CERTIFICATE", "COPY", "REPORT", "INFORMATION", "PORTAL", "DEPARTMENT"}
 
@@ -245,11 +247,146 @@ def parse_land_entities(text: str) -> Dict[str, Any]:
 
     return {
         "doc_id": doc_id,
+        "document_number": document_number,
+        "parcel_id": parcel_code,
         "khasra_plot": khasra_plot,
         "khata_number": khata_number,
         "land_area_ha": land_area_ha,
         "owner_name": owner_name,
         "raw_snippet": raw_snippet,
+    }
+
+
+def verify_deed_with_govt_registry(
+    db,
+    extracted: Dict[str, Any],
+    declared_parcel_id: str,
+    declared_name: str,
+) -> Dict[str, Any]:
+    """
+    Cross-verify extracted deed details against the official LandDeedRegistryMaster table.
+    Returns structured government reconciliation results.
+    """
+    if db is None:
+        return {
+            "status": "UNVERIFIED",
+            "document_number": extracted.get("document_number") or extracted.get("doc_id"),
+            "details_message": "Government deed registry session offline / unqueried.",
+        }
+
+    doc_number = extracted.get("document_number")
+    doc_id = extracted.get("doc_id")
+    parcel_code = extracted.get("parcel_id")
+    raw_snippet = extracted.get("raw_snippet", "")
+
+    if not raw_snippet or len(raw_snippet.strip()) < 15:
+        return {
+            "status": "NOT_EXTRACTABLE",
+            "document_number": None,
+            "details_message": "Document text stream unreadable; could not resolve deed registration number.",
+        }
+
+    from app.models import LandDeedRegistryMaster
+
+    record = None
+    # 1. Search by document_number if extracted
+    candidates = [c for c in [doc_number, doc_id, parcel_code] if c]
+    for cand in candidates:
+        clean_c = cand.replace(" ", "").upper()
+        clean_nodash = clean_c.replace("-", "")
+        for r in db.query(LandDeedRegistryMaster).all():
+            r_doc = (r.document_number or "").upper()
+            r_parcel = (r.parcel_id or "").upper()
+            if (r_doc == clean_c or 
+                r_doc.replace("-", "") == clean_nodash or 
+                r_parcel == clean_c or 
+                r_parcel.replace("-", "") == clean_nodash):
+                record = r
+                break
+        if record:
+            break
+
+    if not record:
+        cand_id = doc_number or doc_id
+        return {
+            "status": "NOT_FOUND",
+            "document_number": cand_id,
+            "registered_owner": None,
+            "registered_parcel_id": None,
+            "sro_office": None,
+            "registration_date": None,
+            "deed_status": "UNRECORDED",
+            "deed_type": None,
+            "details_message": f"Document ID '{cand_id or 'Unknown'}' was not found in Government Central Sub-Registrar Archive.",
+        }
+
+    # Record found! Check status:
+    if record.deed_status in ["REVOKED", "CANCELLED", "DISPUTED"]:
+        return {
+            "status": "REVOKED",
+            "document_number": record.document_number,
+            "registered_owner": record.owner_name,
+            "registered_parcel_id": record.parcel_id,
+            "land_area_ha": record.land_area_ha,
+            "sro_office": record.sub_registrar_office,
+            "registration_date": str(record.registration_date),
+            "deed_status": record.deed_status,
+            "deed_type": record.deed_type,
+            "details_message": f"CRITICAL: Land deed '{record.document_number}' is marked as {record.deed_status} in Government SRO Archive.",
+        }
+
+    clean_decl_parcel = normalize_id(declared_parcel_id)
+    clean_rec_parcel = normalize_id(record.parcel_id)
+
+    # Name similarity check
+    try:
+        from thefuzz import fuzz
+        name_sim = fuzz.token_sort_ratio((declared_name or "").lower(), (record.owner_name or "").lower())
+    except ImportError:
+        name_sim = 100 if (declared_name or "").strip().lower() in (record.owner_name or "").strip().lower() else 50
+
+    if clean_decl_parcel and clean_rec_parcel and clean_decl_parcel != clean_rec_parcel:
+        return {
+            "status": "MISMATCH",
+            "document_number": record.document_number,
+            "registered_owner": record.owner_name,
+            "registered_parcel_id": record.parcel_id,
+            "land_area_ha": record.land_area_ha,
+            "sro_office": record.sub_registrar_office,
+            "registration_date": str(record.registration_date),
+            "deed_status": record.deed_status,
+            "deed_type": record.deed_type,
+            "name_match_pct": name_sim,
+            "details_message": f"Title Divergence: Government Deed '{record.document_number}' is registered for parcel '{record.parcel_id}', contradicting declared parcel '{declared_parcel_id}'.",
+        }
+
+    if name_sim < 60:
+        return {
+            "status": "MISMATCH",
+            "document_number": record.document_number,
+            "registered_owner": record.owner_name,
+            "registered_parcel_id": record.parcel_id,
+            "land_area_ha": record.land_area_ha,
+            "sro_office": record.sub_registrar_office,
+            "registration_date": str(record.registration_date),
+            "deed_status": record.deed_status,
+            "deed_type": record.deed_type,
+            "name_match_pct": name_sim,
+            "details_message": f"Owner Mismatch: Government Deed '{record.document_number}' is registered to '{record.owner_name}', conflicting with applicant '{declared_name}'.",
+        }
+
+    return {
+        "status": "VERIFIED",
+        "document_number": record.document_number,
+        "registered_owner": record.owner_name,
+        "registered_parcel_id": record.parcel_id,
+        "land_area_ha": record.land_area_ha,
+        "sro_office": record.sub_registrar_office,
+        "registration_date": str(record.registration_date),
+        "deed_status": record.deed_status,
+        "deed_type": record.deed_type,
+        "name_match_pct": name_sim,
+        "details_message": f"Official Government Verification Confirmed: Registered in {record.sub_registrar_office} under {record.deed_status} status.",
     }
 
 
@@ -330,13 +467,15 @@ def process_uploaded_land_document(
     declared_khata: str,
     declared_plot: str,
     declared_name: str,
+    db: Optional[Any] = None,
 ) -> Dict[str, Any]:
     """
     Main entry point for processing an uploaded land deed document:
     1. Extracts text from file (digital PDF or image).
-    2. Parses revenue entities (doc_id, khasra, khata, area, owner).
+    2. Parses revenue entities (doc_id, document_number, khasra, khata, area, owner).
     3. Reconciles against declared application claims.
-    4. Returns structured results for database persistence.
+    4. Cross-verifies against official Government SRO Central Registry (LandDeedRegistryMaster).
+    5. Returns structured results for database persistence.
     """
     try:
         text = extract_text_from_file(file_path)
@@ -349,18 +488,32 @@ def process_uploaded_land_document(
             declared_name=declared_name,
         )
 
+        govt_verification = verify_deed_with_govt_registry(
+            db=db,
+            extracted=extracted,
+            declared_parcel_id=declared_parcel_id,
+            declared_name=declared_name,
+        )
+
+        # If government deed archive indicates titleholder mismatch or revoked deed, reflect MISMATCH
+        if govt_verification.get("status") in ["MISMATCH", "REVOKED"]:
+            match_status = "MISMATCH"
+
         return {
-            "ocr_extracted_doc_id": extracted.get("doc_id") or extracted.get("khasra_plot"),
+            "ocr_extracted_doc_id": extracted.get("doc_id") or extracted.get("document_number") or extracted.get("khasra_plot"),
             "ocr_status": status,
             "ocr_match_status": match_status,
             "ocr_confidence_score": confidence,
             "ocr_extracted_data": {
                 "doc_id": extracted.get("doc_id"),
+                "document_number": extracted.get("document_number"),
+                "parcel_id": extracted.get("parcel_id"),
                 "khasra_plot": extracted.get("khasra_plot"),
                 "khata_number": extracted.get("khata_number"),
                 "land_area_ha": extracted.get("land_area_ha"),
                 "owner_name": extracted.get("owner_name"),
                 "raw_snippet": extracted.get("raw_snippet", "")[:600],
+                "govt_registry": govt_verification,
             },
         }
     except Exception as e:

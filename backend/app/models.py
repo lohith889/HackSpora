@@ -143,6 +143,32 @@ class LandRecordMaster(Base):
     title_status = Column(String(50), default="CLEAR", nullable=False)
 
 
+class LandDeedRegistryMaster(Base):
+    """
+    Official State Sub-Registrar Office (SRO) / Central Land Deed Registry.
+    Holds authentic government deed registrations against which uploaded documents are cross-verified.
+    """
+    __tablename__ = "land_deed_registry_master"
+
+    id = Column(Integer, primary_key=True, index=True)
+    document_number = Column(String(100), unique=True, index=True, nullable=False)  # e.g. DOC-UP-2024-001001
+    parcel_id = Column(String(150), index=True, nullable=False)                     # e.g. UP-MRT-HAP-VIL001-K001-P001
+    state_code = Column(String(20), nullable=False)
+    district_code = Column(String(20), nullable=False)
+    tehsil_code = Column(String(20), nullable=False)
+    village_code = Column(String(20), nullable=False)
+    khata_number = Column(String(50), nullable=False)
+    plot_number = Column(String(50), nullable=False)
+    owner_name = Column(String(255), nullable=False)
+    owner_aadhaar_ref = Column(String(255), nullable=True)
+    land_area_ha = Column(Float, nullable=False)
+    registration_date = Column(Date, nullable=False)
+    sub_registrar_office = Column(String(150), nullable=False)  # e.g. SRO Hapur - Central Division
+    deed_status = Column(String(50), default="REGISTERED", nullable=False)  # REGISTERED, REVOKED, DISPUTED, CANCELLED
+    deed_type = Column(String(50), default="SALE_DEED", nullable=False)    # SALE_DEED, PARTITION_DEED, INHERITANCE_ROR
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+
+
 class BankValidationMaster(Base):
     __tablename__ = "bank_validation_master"
 

@@ -12,12 +12,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from app.database import Base
-from app.models import User, Application, PMKisanApplicationDetails, LandRecordMaster
+from app.models import User, Application, PMKisanApplicationDetails, LandRecordMaster, LandDeedRegistryMaster
 from app.services.land_ocr_service import (
     extract_text_from_file,
     parse_land_entities,
     reconcile_land_document,
     process_uploaded_land_document,
+    verify_deed_with_govt_registry,
 )
 from app.services import land_engine
 
@@ -322,4 +323,237 @@ class TestLandEngineOCRFlags:
         assert unreadable_flag.severity == "Medium"
         assert unreadable_flag.score == 20
 
+        db.close()
+
+    def test_land_engine_flags_unrecorded_deed(self):
+        """Verify LandEngine emits LAND_DOC_NOT_IN_GOVT_REGISTRY when deed is unrecorded in government SRO archive."""
+        db = TestingSessionLocal()
+        parcel_id = "UP-LKO-MAL-V001-K102-P45"
+        master = LandRecordMaster(
+            parcel_id=parcel_id,
+            state_code="UP",
+            district_code="LKO",
+            tehsil_code="MAL",
+            village_code="V001",
+            khata_number="102",
+            plot_number="45",
+            owner_aadhaar_ref="sample_ref",
+            owner_name="Ramesh Kumar",
+            land_area_ha=1.85,
+            land_use_code="AGRICULTURE",
+            agricultural_land_flag=True,
+            ownership_status="ACTIVE",
+            title_status="CLEAR",
+        )
+        db.add(master)
+        db.commit()
+
+        details = PMKisanApplicationDetails(
+            application_id=3,
+            farmer_name="Ramesh Kumar",
+            date_of_birth="1985-05-15",
+            gender="Male",
+            category="General",
+            mobile_number="9876543210",
+            otp_verified=True,
+            aadhaar_ref="sample_ref",
+            aadhaar_masked="XXXX-XXXX-1234",
+            bank_account_number="1234567890",
+            ifsc_code="SBIN0001234",
+            state_code="UP",
+            district_code="LKO",
+            tehsil_code="MAL",
+            village_code="V001",
+            khata_number="102",
+            plot_number="45",
+            declared_land_area_ha=1.85,
+            ownership_type="Single",
+            land_document_path="/uploads/unrecorded_deed.pdf",
+            self_declaration=True,
+            e_kyc_consent=True,
+            e_kyc_status=True,
+            parcel_id=parcel_id,
+            bank_account_ifsc_key="1234567890-SBIN0001234",
+            ocr_extracted_doc_id="DOC-UP-2024-UNRECORDED999",
+            ocr_status="SUCCESS",
+            ocr_match_status="MATCHED",
+            ocr_confidence_score=0.95,
+            ocr_extracted_data={"govt_registry": {"status": "NOT_FOUND"}},
+        )
+
+        flags = land_engine.run(details, db)
+        codes = [f.anomaly_code for f in flags]
+        assert "LAND_DOC_NOT_IN_GOVT_REGISTRY" in codes
+        flag = next(f for f in flags if f.anomaly_code == "LAND_DOC_NOT_IN_GOVT_REGISTRY")
+        assert flag.severity == "High"
+        assert flag.score == 35
+        db.close()
+
+    def test_land_engine_flags_revoked_deed(self):
+        """Verify LandEngine emits LAND_DOC_GOVT_DEED_REVOKED when deed is revoked in government SRO archive."""
+        db = TestingSessionLocal()
+        parcel_id = "UP-LKO-MAL-V001-K102-P45"
+        master = LandRecordMaster(
+            parcel_id=parcel_id,
+            state_code="UP",
+            district_code="LKO",
+            tehsil_code="MAL",
+            village_code="V001",
+            khata_number="102",
+            plot_number="45",
+            owner_aadhaar_ref="sample_ref",
+            owner_name="Ramesh Kumar",
+            land_area_ha=1.85,
+            land_use_code="AGRICULTURE",
+            agricultural_land_flag=True,
+            ownership_status="ACTIVE",
+            title_status="CLEAR",
+        )
+        db.add(master)
+        db.commit()
+
+        details = PMKisanApplicationDetails(
+            application_id=4,
+            farmer_name="Ramesh Kumar",
+            date_of_birth="1985-05-15",
+            gender="Male",
+            category="General",
+            mobile_number="9876543210",
+            otp_verified=True,
+            aadhaar_ref="sample_ref",
+            aadhaar_masked="XXXX-XXXX-1234",
+            bank_account_number="1234567890",
+            ifsc_code="SBIN0001234",
+            state_code="UP",
+            district_code="LKO",
+            tehsil_code="MAL",
+            village_code="V001",
+            khata_number="102",
+            plot_number="45",
+            declared_land_area_ha=1.85,
+            ownership_type="Single",
+            land_document_path="/uploads/revoked_deed.pdf",
+            self_declaration=True,
+            e_kyc_consent=True,
+            e_kyc_status=True,
+            parcel_id=parcel_id,
+            bank_account_ifsc_key="1234567890-SBIN0001234",
+            ocr_extracted_doc_id="DOC-UP-2023-REV001",
+            ocr_status="SUCCESS",
+            ocr_match_status="MISMATCH",
+            ocr_confidence_score=0.95,
+            ocr_extracted_data={"govt_registry": {"status": "REVOKED", "deed_status": "REVOKED"}},
+        )
+
+        flags = land_engine.run(details, db)
+        codes = [f.anomaly_code for f in flags]
+        assert "LAND_DOC_GOVT_DEED_REVOKED" in codes
+        flag = next(f for f in flags if f.anomaly_code == "LAND_DOC_GOVT_DEED_REVOKED")
+        assert flag.severity == "Critical"
+        assert flag.score == 60
+        db.close()
+
+
+class TestGovtLandDeedRegistryService:
+    def test_verify_deed_with_govt_registry_verified(self):
+        """Verify that genuine deed registered with government yields VERIFIED status."""
+        import datetime
+        db = TestingSessionLocal()
+        db.add(LandDeedRegistryMaster(
+            document_number="DOC-UP-2024-001001",
+            parcel_id="UP-MRT-HAP-VIL001-K001-P001",
+            state_code="UP",
+            district_code="MRT",
+            tehsil_code="HAP",
+            village_code="VIL001",
+            khata_number="K001",
+            plot_number="P001",
+            owner_name="Ramesh Kumar",
+            land_area_ha=1.25,
+            registration_date=datetime.date(2023, 10, 15),
+            sub_registrar_office="SRO Hapur - Central Division",
+            deed_status="REGISTERED",
+            deed_type="SALE_DEED",
+        ))
+        db.commit()
+
+        extracted = {
+            "document_number": "DOC-UP-2024-001001",
+            "parcel_id": "UP-MRT-HAP-VIL001-K001-P001",
+            "owner_name": "Ramesh Kumar",
+            "raw_snippet": "Valid Bhulekh digital extract with official SRO seal.",
+        }
+
+        res = verify_deed_with_govt_registry(
+            db=db,
+            extracted=extracted,
+            declared_parcel_id="UP-MRT-HAP-VIL001-K001-P001",
+            declared_name="Ramesh Kumar",
+        )
+
+        assert res["status"] == "VERIFIED"
+        assert res["document_number"] == "DOC-UP-2024-001001"
+        assert res["registered_owner"] == "Ramesh Kumar"
+        assert "SRO Hapur" in res["sro_office"]
+        db.close()
+
+    def test_verify_deed_with_govt_registry_mismatch_owner(self):
+        """Verify titleholder divergence yields MISMATCH status."""
+        import datetime
+        db = TestingSessionLocal()
+        db.add(LandDeedRegistryMaster(
+            document_number="DOC-UP-2024-999001",
+            parcel_id="UP-BAR-FAT-V009-K999-P99",
+            state_code="UP",
+            district_code="BAR",
+            tehsil_code="FAT",
+            village_code="V009",
+            khata_number="K999",
+            plot_number="P99",
+            owner_name="Shrimati Malti Devi",
+            land_area_ha=4.50,
+            registration_date=datetime.date(2021, 5, 18),
+            sub_registrar_office="SRO Barabanki - Fatehpur Division",
+            deed_status="REGISTERED",
+            deed_type="SALE_DEED",
+        ))
+        db.commit()
+
+        extracted = {
+            "document_number": "DOC-UP-2024-999001",
+            "parcel_id": "UP-BAR-FAT-V009-K999-P99",
+            "owner_name": "Shrimati Malti Devi",
+            "raw_snippet": "Digital RoR for DOC-UP-2024-999001 Barabanki.",
+        }
+
+        # Applicant is Hari Om claiming parcel UP-LKO-BAK-VIL009-K001-P001
+        res = verify_deed_with_govt_registry(
+            db=db,
+            extracted=extracted,
+            declared_parcel_id="UP-LKO-BAK-VIL009-K001-P001",
+            declared_name="Hari Om",
+        )
+
+        assert res["status"] == "MISMATCH"
+        assert res["registered_owner"] == "Shrimati Malti Devi"
+        assert "contradicting declared parcel" in res["details_message"]
+        db.close()
+
+    def test_verify_deed_with_govt_registry_not_found(self):
+        """Verify unrecorded document yields NOT_FOUND status."""
+        db = TestingSessionLocal()
+        extracted = {
+            "document_number": "DOC-UP-2024-FABRICATED99",
+            "raw_snippet": "Counterfeit unrecorded deed extract.",
+        }
+
+        res = verify_deed_with_govt_registry(
+            db=db,
+            extracted=extracted,
+            declared_parcel_id="UP-MRT-HAP-VIL001-K001-P001",
+            declared_name="Ramesh Kumar",
+        )
+
+        assert res["status"] == "NOT_FOUND"
+        assert res["document_number"] == "DOC-UP-2024-FABRICATED99"
         db.close()

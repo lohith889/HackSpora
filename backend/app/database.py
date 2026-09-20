@@ -5,7 +5,7 @@ from app.config import settings
 # For SQLite, check_same_thread=False allows multi-threaded requests (standard in FastAPI)
 engine = create_engine(
     settings.DATABASE_URL,
-    connect_args={"check_same_thread": False} if settings.DATABASE_URL.startswith("sqlite") else {}
+    connect_args={"check_same_thread": False, "timeout": 30} if settings.DATABASE_URL.startswith("sqlite") else {}
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -14,9 +14,14 @@ Base = declarative_base()
 
 
 def run_schema_migrations(target_engine=None):
-    """Ensure newly introduced columns exist in SQLite without requiring manual migrations."""
+    """Ensure newly introduced tables and columns exist in SQLite without requiring manual migrations."""
     eng = target_engine or engine
     try:
+        with eng.connect() as conn:
+            conn.exec_driver_sql("PRAGMA journal_mode=WAL")
+            conn.exec_driver_sql("PRAGMA busy_timeout=30000")
+            conn.commit()
+        Base.metadata.create_all(bind=eng)
         with eng.connect() as conn:
             cursor = conn.exec_driver_sql("PRAGMA table_info(anomaly_reports)")
             columns = [row[1] for row in cursor.fetchall()]

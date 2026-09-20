@@ -163,7 +163,7 @@ async def create_pm_kisan_application(
         ifsc_code=ifsc_code,
     )
 
-    # 8b. Automated Land Document OCR & Verification (Phase 9)
+    # 8b. Automated Land Document OCR & Government Registry Cross-Verification
     actual_doc_file = os.path.join(settings.UPLOAD_DIR, os.path.basename(document_path))
     ocr_result = process_uploaded_land_document(
         file_path=actual_doc_file,
@@ -171,6 +171,7 @@ async def create_pm_kisan_application(
         declared_khata=khata_number,
         declared_plot=plot_number,
         declared_name=farmer_name,
+        db=db,
     )
 
     # 9. Create Application record

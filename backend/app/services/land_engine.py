@@ -9,11 +9,12 @@ Checks against land_records_master:
   5. LAND_OWNERSHIP_INACTIVE     — ownership status is not ACTIVE (DISPUTED/INACTIVE)
   6. LAND_AREA_DISCREPANCY       — declared area deviates significantly from registry
 """
-from typing import List
+from typing import List, Optional
+import json
 from sqlalchemy.orm import Session
 from thefuzz import fuzz
 
-from app.models import LandRecordMaster, PMKisanApplicationDetails
+from app.models import LandRecordMaster, LandDeedRegistryMaster, PMKisanApplicationDetails
 from app.services.engine_types import AnomalyFlagResult
 
 # Fuzzy match thresholds: below these → anomaly
@@ -194,6 +195,64 @@ def run(details: PMKisanApplicationDetails, db: Session) -> List[AnomalyFlagResu
                 "ocr_match_status": details.ocr_match_status,
             },
         ))
+
+    # 7b. Official Government Land Deed Registry Cross-Verification (SRO Archive)
+    govt_reg = None
+    if getattr(details, "ocr_extracted_data", None):
+        ocr_data = details.ocr_extracted_data
+        if isinstance(ocr_data, str):
+            try:
+                ocr_data = json.loads(ocr_data)
+            except Exception:
+                ocr_data = {}
+        govt_reg = ocr_data.get("govt_registry")
+
+    if not govt_reg and db is not None and getattr(details, "ocr_extracted_doc_id", None) and getattr(details, "ocr_status", None) == "SUCCESS":
+        doc_ref = str(details.ocr_extracted_doc_id).strip().upper()
+        clean_nodash = doc_ref.replace("-", "")
+        for r in db.query(LandDeedRegistryMaster).all():
+            r_doc = (r.document_number or "").upper()
+            r_parcel = (r.parcel_id or "").upper()
+            if r_doc == doc_ref or r_doc.replace("-", "") == clean_nodash or r_parcel == doc_ref:
+                if r.deed_status in ["REVOKED", "CANCELLED", "DISPUTED"]:
+                    govt_reg = {"status": "REVOKED", "deed_status": r.deed_status, "sro_office": r.sub_registrar_office}
+                elif r.parcel_id != details.parcel_id:
+                    govt_reg = {"status": "MISMATCH", "registered_parcel_id": r.parcel_id, "registered_owner": r.owner_name}
+                else:
+                    govt_reg = {"status": "VERIFIED", "registered_parcel_id": r.parcel_id, "registered_owner": r.owner_name}
+                break
+
+    if govt_reg:
+        if govt_reg.get("status") == "REVOKED":
+            flags.append(AnomalyFlagResult(
+                anomaly_code="LAND_DOC_GOVT_DEED_REVOKED",
+                severity="Critical",
+                score=60,
+                rationale=(
+                    f"Official Government Sub-Registrar Archive reports land deed '{details.ocr_extracted_doc_id or 'Unknown'}' "
+                    f"has been {govt_reg.get('deed_status', 'REVOKED')} in official archives."
+                ),
+                evidence_json={
+                    "ocr_extracted_doc_id": details.ocr_extracted_doc_id,
+                    "govt_registry": govt_reg,
+                },
+            ))
+        elif govt_reg.get("status") == "NOT_FOUND" and getattr(details, "ocr_match_status", None) != "MISMATCH" and getattr(details, "ocr_status", None) == "SUCCESS":
+            doc_ref = str(details.ocr_extracted_doc_id or "").strip()
+            if len(doc_ref) >= 6:
+                flags.append(AnomalyFlagResult(
+                    anomaly_code="LAND_DOC_NOT_IN_GOVT_REGISTRY",
+                    severity="High",
+                    score=35,
+                    rationale=(
+                        f"Extracted land deed number '{doc_ref}' was not found in the official "
+                        f"Government Sub-Registrar Central Registry. Unrecorded or counterfeit document suspected."
+                    ),
+                    evidence_json={
+                        "ocr_extracted_doc_id": details.ocr_extracted_doc_id,
+                        "govt_registry": govt_reg,
+                    },
+                ))
 
     # 8. Land Document OCR unreadable / illegible check
     if getattr(details, "ocr_status", None) == "UNREADABLE":
