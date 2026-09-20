@@ -230,3 +230,26 @@ class AuditLog(Base):
 
     application = relationship("Application", back_populates="audit_logs")
     admin = relationship("User", back_populates="audit_actions")
+
+
+class UIDAIAadhaarMaster(Base):
+    """
+    Unique Identification Authority of India (UIDAI) Central Identities Data Repository (CIDR).
+    Simulates the official government demographic and biometric e-KYC repository.
+    Used to authenticate applicant Aadhaar tokens, names, date of birth, gender, and active status.
+    """
+    __tablename__ = "uidai_aadhaar_master"
+
+    id = Column(Integer, primary_key=True, index=True)
+    aadhaar_ref = Column(String(255), unique=True, index=True, nullable=False)
+    aadhaar_masked = Column(String(30), nullable=False)            # e.g. XXXX-XXXX-0001
+    full_name = Column(String(255), nullable=False)
+    date_of_birth = Column(Date, nullable=False)
+    gender = Column(String(20), nullable=False)                    # Male, Female, Other
+    mobile_number = Column(String(20), nullable=True)              # Linked mobile in UIDAI
+    pincode = Column(String(10), nullable=True)
+    state_code = Column(String(20), nullable=True)
+    aadhaar_status = Column(String(50), default="ACTIVE", nullable=False)  # ACTIVE, SUSPENDED, DEACTIVATED
+    ekyc_eligible = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow, nullable=False)
+
