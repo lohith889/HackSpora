@@ -34,10 +34,42 @@ export default {
           text: '#991b1b',
         },
         gov: {
-          DEFAULT: '#166534', // Forest green
+          50: '#f0fdf4',
+          100: '#dcfce7',
+          200: '#bbf7d0',
+          300: '#86efac',
+          400: '#4ade80',
+          500: '#22c55e',
+          600: '#16a34a',
+          700: '#15803d',
+          800: '#166534',
+          900: '#14532d',
+          950: '#072e18',
+          DEFAULT: '#166534',
           hover: '#14532d',
-          subtle: '#f0fdf4',  // Green 50
-          border: '#86efac',  // Green 300
+          subtle: '#f0fdf4',
+          border: '#86efac',
+        },
+        sage: {
+          50: '#f4f7f4',
+          100: '#e5ebe5',
+          200: '#cbd7cc',
+          700: '#405743',
+          800: '#2f4232',
+        },
+        charcoal: {
+          900: '#0f172a',
+          800: '#1e293b',
+          700: '#334155',
+          600: '#475569',
+          500: '#64748b',
+          400: '#94a3b8',
+          100: '#f1f5f9',
+          50: '#f8fafc',
+        },
+        saffron: {
+          500: '#ea580c',
+          600: '#c2410c',
         },
         warn: {
           DEFAULT: '#b45309', // Amber 700
@@ -47,27 +79,15 @@ export default {
         },
       },
       fontFamily: {
-        sans: ['system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'sans-serif'],
+        heading: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
         serif: ['Georgia', 'Cambria', '"Times New Roman"', 'Times', 'serif'],
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', '"Liberation Mono"', 'monospace'],
       },
-      borderRadius: {
-        none: '0px',
-        DEFAULT: '0px',
-        sm: '2px',
-        md: '4px',
-        lg: '4px',
-        xl: '4px',
-        '2xl': '4px',
-        full: '4px', // Hard limit: max border-radius is 4px
-      },
       boxShadow: {
-        none: 'none',
-        sm: 'none',
-        md: 'none',
-        lg: 'none',
-        xl: 'none',
-        '2xl': 'none',
+        'widget': '0 20px 40px -15px rgba(15, 35, 20, 0.18), 0 0 0 1px rgba(22, 101, 52, 0.08)',
+        'subtle': '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)',
+        'floating': '0 10px 25px -5px rgba(20, 83, 45, 0.25), 0 8px 10px -6px rgba(20, 83, 45, 0.2)',
       },
     },
   },

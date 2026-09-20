@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KisanGuard Scheme Assistant — Production RAG Chatbot</title>
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Plus Jakarta Sans', 'Inter', 'sans-serif'],
+          },
+          colors: {
+            gov: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              300: '#86efac',
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+              950: '#072e18'
+            },
+            sage: {
+              50: '#f4f7f4',
+              100: '#e5ebe5',
+              200: '#cbd7cc',
+              700: '#405743',
+              800: '#2f4232'
+            },
+            charcoal: {
+              900: '#0f172a',
+              800: '#1e293b',
+              700: '#334155',
+              600: '#475569',
+              500: '#64748b',
+              400: '#94a3b8',
+              100: '#f1f5f9',
+              50: '#f8fafc'
+            },
+            saffron: {
+              500: '#ea580c',
+              600: '#c2410c'
+            }
+          },
+          boxShadow: {
+            'widget': '0 20px 40px -15px rgba(15, 35, 20, 0.18), 0 0 0 1px rgba(22, 101, 52, 0.08)',
+            'subtle': '0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.03)',
+            'floating': '0 10px 25px -5px rgba(20, 83, 45, 0.25), 0 8px 10px -6px rgba(20, 83, 45, 0.2)'
+          },
+          keyframes: {
+            pulseSlow: {
+              '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+              '50%': { opacity: '0.8', transform: 'scale(1.08)' }
+            },
+            waveBar: {
+              '0%, 100%': { height: '6px' },
+              '50%': { height: '22px' }
+            }
+          },
+          animation: {
+            pulseSlow: 'pulseSlow 2s ease-in-out infinite',
+            wave: 'waveBar 1.1s ease-in-out infinite'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Custom clean scrollbar */
+    .custom-scroll::-webkit-scrollbar {
+      width: 5px;
+    }
+    .custom-scroll::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 9999px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    /* Smooth transition for collapsible source documents */
+    .source-details[open] summary svg {
+      transform: rotate(180deg);
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-charcoal-800 font-sans h-full min-h-screen relative overflow-x-hidden antialiased flex flex-col justify-between selection:bg-gov-100 selection:text-gov-900">
+
+  <!-- Background App Canvas Context (Dimmed / Realistic Application Backdrop) -->
+  <div class="fixed inset-0 pointer-events-none z-0 opacity-40 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px]">
+    <div class="max-w-7xl mx-auto px-6 pt-8">
+      <div class="flex items-center justify-between pb-6 border-b border-slate-300/70">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-lg bg-gov-800 flex items-center justify-center text-white font-bold text-sm">KG</div>
+          <div>
+            <div class="font-heading font-bold text-slate-800 text-base">Ministry of Agriculture & Farmers Welfare</div>
+            <div class="text-xs text-slate-500 font-medium">National Integrated Agritech & Scheme Portal</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-4 text-xs font-semibold text-slate-600">
+          <span class="px-3 py-1.5 bg-white border border-slate-200 rounded-md">Scheme Repository: 5 Live Data Sources</span>
+          <span class="text-gov-700 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-gov-600"></span> Live RAG Ingestion Active</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Showcase Container: Floating Widget Layer -->
+  <div class="relative z-10 w-full min-h-screen p-4 sm:p-6 lg:p-8 flex flex-col justify-end items-end">
+
+    <!-- FLOATING CHATBOT WINDOW (390–430px wide, ~640px high) -->
+    <section 
+      id="chatbot-panel" 
+      aria-label="KisanGuard Scheme Assistant Chatbot"
+      class="w-full sm:w-[418px] h-[648px] max-h-[92vh] bg-white rounded-2xl shadow-widget border border-slate-200/90 flex flex-col overflow-hidden mb-3 transition-all duration-300 ease-out transform origin-bottom-right"
+    >
+      
+      <!-- 1. OFFICIAL GOV HEADER -->
+      <header class="bg-gov-900 text-white px-4 py-3.5 relative flex-shrink-0 border-b border-gov-800 shadow-sm">
+        <!-- Tricolor Indian Emblem Inspired Accent Bar -->
+        <div class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-white to-gov-500 opacity-90"></div>
+
+        <div class="flex items-center justify-between mt-1">
+          <!-- Left: Identity & Shield Icon -->
+          <div class="flex items-center gap-2.5">
+            <div class="relative w-9 h-9 rounded-xl bg-gov-800/90 border border-gov-700 flex items-center justify-center shadow-inner text-gov-300">
+              <!-- Security Shield + Plant Icon -->
+              <svg class="w-5 h-5 text-gov-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M12 8v8"/>
+                <path d="M9 13l3-3 3 3"/>
+              </svg>
+              <!-- Verified small pip badge -->
+              <span class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-gov-500 border-2 border-gov-900 rounded-full flex items-center justify-center">
+                <svg class="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 12 12"><path d="M10.28 2.28L3.989 8.575 1.705 6.305a1 1 0 00-1.41 1.41l3 3a1 1 0 001.414 0l7-7a1 1 0 00-1.414-1.414z"/></svg>
+              </span>
+            </div>
+            <div>
+              <div class="flex items-center gap-1.5">
+                <h1 class="font-heading font-bold text-sm tracking-tight text-white leading-tight">KisanGuard</h1>
+                <span class="text-[10px] font-semibold tracking-wider uppercase bg-gov-800 text-gov-300 px-1.5 py-0.5 rounded border border-gov-700/60">RAG AI</span>
+              </div>
+              <p class="text-[11px] text-gov-200/90 font-medium leading-none mt-0.5">Verified Agricultural Scheme Assistant</p>
+            </div>
+          </div>
+
+          <!-- Right: Controls (Clear conversation, Minimize/Close) -->
+          <div class="flex items-center gap-1 text-gov-200">
+            <!-- Clear chat history button -->
+            <button 
+              id="clear-chat-btn"
+              type="button" 
+              title="Clear conversation" 
+              class="p-1.5 rounded-lg hover:bg-gov-800 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-gov-400 text-gov-200"
+              onclick="resetToWelcome()"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+              </svg>
+            </button>
+
+            <!-- Close / Minimize Panel -->
+            <button 
+              id="close-panel-btn"
+              type="button" 
+              title="Close chat widget" 
+              class="p-1.5 rounded-lg hover:bg-gov-800 hover:text-white transition-colors focus:outline-none focus:ring-2 focus:ring-gov-400 text-gov-200"
+              onclick="toggleChatbot()"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Trust Indicator Badge Strip -->
+        <div class="mt-2.5 pt-2 border-t border-gov-800/80 flex items-center justify-between text-[11px]">
+          <div class="flex items-center gap-1.5 text-gov-200 font-medium">
+            <svg class="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <span class="tracking-wide">Official Ministry Scheme Data</span>
+          </div>
+          <div class="flex items-center gap-1.5 text-[10px] text-gov-300 font-mono">
+            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>RAG Synced</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- 2. UTILITY TOOLBAR: Multilingual Selector & Voice Audio Readout Toggle -->
+      <div class="bg-sage-50 px-3.5 py-2 border-b border-slate-200/90 flex items-center justify-between flex-shrink-0 text-xs text-charcoal-700">
+        <!-- Language selector with quick change dropdown -->
+        <div class="flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-gov-700 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/>
+          </svg>
+          <label for="language-select" class="sr-only">Select Scheme Assistant Language</label>
+          <div class="relative">
+            <select 
+              id="language-select" 
+              class="appearance-none bg-white font-medium text-[11px] text-charcoal-800 border border-slate-300 rounded-md py-1 pl-2 pr-6 focus:outline-none focus:ring-1 focus:ring-gov-600 focus:border-gov-600 cursor-pointer shadow-subtle"
+            >
+              <option value="en">English (Official)</option>
+              <option value="hi">हिंदी (Hindi)</option>
+              <option value="ta" selected>தமிழ் (Tamil)</option>
+              <option value="te">తెలుగు (Telugu)</option>
+              <option value="mr">मराठी (Marathi)</option>
+              <option value="bn">বাংলা (Bengali)</option>
+              <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
+            </select>
+            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-slate-500">
+              <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Output (Read Aloud) Switch for accessibility -->
+        <div class="flex items-center gap-2">
+          <button 
+            id="tts-toggle"
+            type="button" 
+            onclick="toggleTts()"
+            title="Toggle voice readout of scheme replies"
+            class="flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors font-medium"
+          >
+            <svg id="tts-icon" class="w-3.5 h-3.5 text-gov-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"/>
+            </svg>
+            <span id="tts-label">Voice Readout</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. CONVERSATION MESSAGE SCROLL REGION -->
+      <main 
+        id="chat-messages" 
+        class="flex-1 overflow-y-auto p-4 space-y-4 custom-scroll bg-[#FAFBF9]"
+        role="log" 
+        aria-live="polite"
+      >
+        
+        <!-- Welcome Message Component (Initial Empty / Guided State) -->
+        <div id="welcome-block" class="space-y-3 pb-2 border-b border-slate-200/80">
+          <div class="flex items-start gap-2.5">
+            <div class="w-7 h-7 rounded-lg bg-gov-800 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs shadow-sm">
+              KG
+            </div>
+            <div class="bg-white border border-slate-200/90 rounded-2xl rounded-tl-sm p-3.5 text-xs text-charcoal-800 shadow-subtle leading-relaxed max-w-[92%]">
+              <p class="font-heading font-bold text-gov-900 text-sm mb-1 flex items-center gap-1.5">
+                Namaste 🙏
+              </p>
+              <p class="text-charcoal-700">
+                I am your <strong>KisanGuard Agricultural Scheme Assistant</strong>. I provide authentic answers retrieved directly from official Ministry guidelines and scheme gazettes.
+              </p>
+            </div>
+          </div>
+
+          <!-- 5 Supported Schemes Chips -->
+          <div class="pt-1">
+            <div class="flex items-center justify-between mb-1.5 px-0.5">
+              <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">5 Supported Schemes</span>
+              <span class="text-[10px] text-gov-700 font-medium">Click to explore</span>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-1.5">
+              <!-- PM-KISAN -->
+              <button 
+                onclick="sendQuickPrompt('Tell me about PM-KISAN Income Support scheme and eligibility')" 
+                class="flex flex-col text-left p-2 rounded-lg bg-white hover:bg-gov-50/70 border border-slate-200/90 hover:border-gov-300 transition-all text-charcoal-800 group shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-[11px] text-gov-900 group-hover:text-gov-700">PM-KISAN</span>
+                  <span class="text-[9px] bg-gov-100 text-gov-800 font-medium px-1 rounded">₹6,000/yr</span>
+                </div>
+                <span class="text-[10px] text-slate-500 mt-0.5 line-clamp-1">Income support for landholders</span>
+              </button>
+
+              <!-- PMFBY -->
+              <button 
+                onclick="sendQuickPrompt('Explain PMFBY Crop Insurance coverage and claim process')" 
+                class="flex flex-col text-left p-2 rounded-lg bg-white hover:bg-gov-50/70 border border-slate-200/90 hover:border-gov-300 transition-all text-charcoal-800 group shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-[11px] text-gov-900 group-hover:text-gov-700">PMFBY</span>
+                  <span class="text-[9px] bg-blue-50 text-blue-700 font-medium px-1 rounded">Insurance</span>
+                </div>
+                <span class="text-[10px] text-slate-500 mt-0.5 line-clamp-1">Crop loss & natural hazard cover</span>
+              </button>
+
+              <!-- PM-KUSUM -->
+              <button 
+                onclick="sendQuickPrompt('How do I apply for PM-KUSUM Solar Pump subsidy?')" 
+                class="flex flex-col text-left p-2 rounded-lg bg-white hover:bg-gov-50/70 border border-slate-200/90 hover:border-gov-300 transition-all text-charcoal-800 group shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-[11px] text-gov-900 group-hover:text-gov-700">PM-KUSUM</span>
+                  <span class="text-[9px] bg-amber-50 text-amber-800 font-medium px-1 rounded">Solar</span>
+                </div>
+                <span class="text-[10px] text-slate-500 mt-0.5 line-clamp-1">Solar pump & grid connection</span>
+              </button>
+
+              <!-- Soil Health Card -->
+              <button 
+                onclick="sendQuickPrompt('What is Soil Health Card Scheme and how to get tested?')" 
+                class="flex flex-col text-left p-2 rounded-lg bg-white hover:bg-gov-50/70 border border-slate-200/90 hover:border-gov-300 transition-all text-charcoal-800 group shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="font-semibold text-[11px] text-gov-900 group-hover:text-gov-700">Soil Health Card</span>
+                  <span class="text-[9px] bg-emerald-50 text-emerald-800 font-medium px-1 rounded">Nutrients</span>
+                </div>
+                <span class="text-[10px] text-slate-500 mt-0.5 line-clamp-1">Soil testing & crop advisory</span>
+              </button>
+
+              <!-- Agri Infra Fund (Span 2 for neat bottom finish) -->
+              <button 
+                onclick="sendQuickPrompt('Explain Agriculture Infrastructure Fund (AIF) loan interest subvention')" 
+                class="col-span-2 flex items-center justify-between p-2 rounded-lg bg-white hover:bg-gov-50/70 border border-slate-200/90 hover:border-gov-300 transition-all text-charcoal-800 group shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+              >
+                <div>
+                  <span class="font-semibold text-[11px] text-gov-900 group-hover:text-gov-700 block">Agriculture Infrastructure Fund (AIF)</span>
+                  <span class="text-[10px] text-slate-500">3% Interest subvention for post-harvest infra & cold chain</span>
+                </div>
+                <span class="text-[10px] bg-purple-50 text-purple-700 font-semibold px-2 py-0.5 rounded ml-2">₹1 Lakh Cr</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Quick Action Prompts -->
+          <div class="pt-1">
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider block mb-1 px-0.5">Quick Inquiries</span>
+            <div class="flex flex-wrap gap-1.5">
+              <button onclick="sendQuickPrompt('Check PM-KISAN 17th installment eligibility')" class="text-[11px] bg-white hover:bg-slate-100 text-charcoal-700 border border-slate-200 px-2.5 py-1 rounded-full transition-colors flex items-center gap-1">
+                <span>🌾 Check PM-KISAN eligibility</span>
+              </button>
+              <button onclick="sendQuickPrompt('What documents are required for PMFBY crop insurance?')" class="text-[11px] bg-white hover:bg-slate-100 text-charcoal-700 border border-slate-200 px-2.5 py-1 rounded-full transition-colors flex items-center gap-1">
+                <span>📑 Required documents list</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- MESSAGE 1: USER QUESTION -->
+        <div class="flex justify-end">
+          <div class="max-w-[85%] bg-gov-800 text-white text-xs px-3.5 py-2.5 rounded-2xl rounded-tr-xs shadow-sm leading-relaxed">
+            <p>Am I eligible for PM-KISAN if my family owns 3 acres, and what documents are required for e-KYC?</p>
+            <span class="text-[10px] text-gov-200/80 block text-right mt-1 font-mono">10:42 AM · Sent</span>
+          </div>
+        </div>
+
+        <!-- MESSAGE 2: RAG AI RESPONSE WITH STRUCTURED GOV CITATIONS & COLLAPSIBLE SOURCES -->
+        <div class="flex items-start gap-2.5">
+          <div class="w-7 h-7 rounded-lg bg-gov-800 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs shadow-sm">
+            KG
+          </div>
+          
+          <div class="max-w-[90%] space-y-2">
+            <!-- Main Content Card -->
+            <div class="bg-white border border-slate-200/90 rounded-2xl rounded-tl-sm p-3.5 text-xs text-charcoal-800 shadow-subtle leading-relaxed">
+              
+              <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+                <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-gov-800 bg-gov-50 px-2 py-0.5 rounded-md border border-gov-200/70">
+                  <svg class="w-3 h-3 text-gov-600" fill="currentColor" viewBox="0 0 12 12"><path d="M10.28 2.28L3.989 8.575 1.705 6.305a1 1 0 00-1.41 1.41l3 3a1 1 0 001.414 0l7-7a1 1 0 00-1.414-1.414z"/></svg>
+                  Verified PM-KISAN Operational Guidelines
+                </span>
+                <span class="text-[10px] text-slate-400 font-mono">Confidence: 99.2%</span>
+              </div>
+
+              <p class="mb-2.5 text-charcoal-700">
+                <strong>Yes, you are eligible.</strong> Under current PM-KISAN rules, the previous 2-hectare land cap was removed. All landholding farmer families with cultivable land recorded in their name are eligible, subject to standard exclusion criteria.
+              </p>
+
+              <!-- Structured Breakdown -->
+              <div class="space-y-2 mb-2.5">
+                <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80">
+                  <span class="font-semibold text-gov-900 block mb-1 flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5 text-gov-700" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                    Mandatory e-KYC Requirements:
+                  </span>
+                  <ul class="list-disc list-inside space-y-1 text-slate-600 pl-1 text-[11px]">
+                    <li><strong class="text-charcoal-700">Aadhaar Card:</strong> Linked to your active mobile number.</li>
+                    <li><strong class="text-charcoal-700">Land Records:</strong> Verified RoR / Khatauni in the beneficiary's name.</li>
+                    <li><strong class="text-charcoal-700">Bank Account:</strong> Aadhaar-seeded & NPCI-mapped for DBT transfers.</li>
+                  </ul>
+                </div>
+
+                <div class="p-2 rounded-lg bg-amber-50/70 border border-amber-200/80 text-[11px] text-amber-900 flex items-start gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-amber-700 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                  <span><strong>Important Warning:</strong> Institutional landholders, income-tax payers, and government employees remain excluded.</span>
+                </div>
+              </div>
+
+              <!-- RAG Source Grounding Accordion (Expandable Document Citations) -->
+              <details class="source-details group mt-2 pt-2 border-t border-slate-100">
+                <summary class="flex items-center justify-between cursor-pointer list-none text-[11px] font-semibold text-gov-800 hover:text-gov-900 select-none py-1">
+                  <span class="flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5 text-gov-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                    </svg>
+                    <span>Sources • 3 Official Documents Retrieved</span>
+                  </span>
+                  <svg class="w-3 h-3 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                  </svg>
+                </summary>
+
+                <div class="mt-2 space-y-1.5 pl-1 pr-0.5 text-[11px] text-slate-600 bg-slate-50/80 p-2 rounded-lg border border-slate-200">
+                  <!-- Citation 1 -->
+                  <div class="flex items-start justify-between gap-2 pb-1.5 border-b border-slate-200/60">
+                    <div>
+                      <span class="font-medium text-slate-800 block">1. PM-KISAN Operational Guidelines (Revised 2023)</span>
+                      <span class="text-[10px] text-slate-500">Ministry of Agriculture · Sec. 3.2 (Eligibility & Land Record Clause)</span>
+                    </div>
+                    <span class="text-[9px] bg-slate-200 text-slate-700 px-1 py-0.5 rounded font-mono flex-shrink-0">Page 14</span>
+                  </div>
+                  <!-- Citation 2 -->
+                  <div class="flex items-start justify-between gap-2 pb-1.5 border-b border-slate-200/60">
+                    <div>
+                      <span class="font-medium text-slate-800 block">2. Standard Operating Procedure for e-KYC & DBT</span>
+                      <span class="text-[10px] text-slate-500">DA&FW Notification · Gazette Vol. 44</span>
+                    </div>
+                    <span class="text-[9px] bg-slate-200 text-slate-700 px-1 py-0.5 rounded font-mono flex-shrink-0">Doc #88</span>
+                  </div>
+                  <!-- Citation 3 -->
+                  <div class="flex items-start justify-between gap-2">
+                    <div>
+                      <span class="font-medium text-slate-800 block">3. Exclusion Criteria Notice for Institutional Owners</span>
+                      <span class="text-[10px] text-slate-500">PM-KISAN Central Division Portal</span>
+                    </div>
+                    <a href="#" class="text-gov-700 hover:underline text-[10px] flex items-center gap-0.5 font-medium flex-shrink-0" onclick="event.preventDefault()">
+                      <span>View</span>
+                      <svg class="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                    </a>
+                  </div>
+                </div>
+              </details>
+
+              <!-- Quick action within reply -->
+              <div class="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <button 
+                  onclick="sendQuickPrompt('How do I complete Aadhaar face authentication e-KYC on the PM-KISAN mobile app?')" 
+                  class="text-gov-700 hover:text-gov-800 font-medium flex items-center gap-1"
+                >
+                  <span>Need step-by-step e-KYC tutorial?</span>
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
+                </button>
+                <button 
+                  type="button" 
+                  title="Copy official reply" 
+                  onclick="copyReplyText(this)"
+                  class="text-slate-400 hover:text-slate-600 p-1 rounded"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+                </button>
+              </div>
+
+            </div>
+            
+            <div class="text-[10px] text-slate-400 px-1 font-mono flex items-center justify-between">
+              <span>Answer grounded in official ministerial corpus</span>
+              <span>10:42 AM</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dynamic Typing / Loading State (Hidden by default, triggered on prompt) -->
+        <div id="loading-state" class="hidden flex items-start gap-2.5">
+          <div class="w-7 h-7 rounded-lg bg-gov-800 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs shadow-sm">
+            KG
+          </div>
+          <div class="bg-white border border-slate-200 rounded-2xl rounded-tl-sm px-3.5 py-3 text-xs text-slate-600 shadow-subtle flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-gov-600 animate-bounce" style="animation-delay: 0ms"></span>
+            <span class="w-2 h-2 rounded-full bg-gov-600 animate-bounce" style="animation-delay: 150ms"></span>
+            <span class="w-2 h-2 rounded-full bg-gov-600 animate-bounce" style="animation-delay: 300ms"></span>
+            <span class="text-[11px] text-slate-500 font-medium ml-1">Retrieving official scheme documents...</span>
+          </div>
+        </div>
+
+        <!-- Dynamic Error State Component (Hidden toggleable sample) -->
+        <div id="error-card" class="hidden flex items-start gap-2.5">
+          <div class="w-7 h-7 rounded-lg bg-red-800 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs">
+            !
+          </div>
+          <div class="bg-red-50/90 border border-red-200 rounded-2xl rounded-tl-sm p-3 text-xs text-red-900 shadow-subtle max-w-[90%]">
+            <div class="flex items-center gap-1.5 font-semibold text-red-800 mb-1">
+              <svg class="w-3.5 h-3.5 text-red-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/></svg>
+              <span>Unable to verify with scheme database</span>
+            </div>
+            <p class="text-red-700 text-[11px] mb-2 leading-relaxed">
+              We could not establish high-confidence retrieval from the official document index right now.
+            </p>
+            <button onclick="retryLastPrompt()" class="bg-white hover:bg-red-100 text-red-800 border border-red-300 font-medium px-2.5 py-1 rounded text-[11px] transition-colors shadow-xs">
+              Try again
+            </button>
+          </div>
+        </div>
+
+      </main>
+
+      <!-- 4. VOICE ACTIVE OVERLAY BAR (Pops up during microphone listening) -->
+      <div id="voice-overlay" class="hidden bg-emerald-900 text-white px-4 py-2.5 flex items-center justify-between border-t border-emerald-800 animate-fadeIn">
+        <div class="flex items-center gap-2.5">
+          <span class="relative flex h-2.5 w-2.5">
+            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+            <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-400"></span>
+          </span>
+          <span class="text-xs font-medium text-emerald-100">Listening to voice query...</span>
+        </div>
+        
+        <!-- Restrained Voice Waveform Visualizer -->
+        <div class="flex items-center gap-1 h-5">
+          <span class="w-1 bg-emerald-300 rounded-full animate-wave" style="animation-delay: 0.1s"></span>
+          <span class="w-1 bg-emerald-300 rounded-full animate-wave" style="animation-delay: 0.3s"></span>
+          <span class="w-1 bg-emerald-300 rounded-full animate-wave" style="animation-delay: 0.2s"></span>
+          <span class="w-1 bg-emerald-300 rounded-full animate-wave" style="animation-delay: 0.4s"></span>
+          <span class="w-1 bg-emerald-300 rounded-full animate-wave" style="animation-delay: 0.15s"></span>
+        </div>
+
+        <button onclick="stopVoiceInput()" class="text-[10px] uppercase tracking-wider bg-emerald-800 hover:bg-emerald-700 text-emerald-200 px-2 py-0.5 rounded font-semibold transition-colors">
+          Cancel
+        </button>
+      </div>
+
+      <!-- 5. MESSAGE COMPOSER (STICKY BOTTOM INPUT) -->
+      <footer class="bg-white border-t border-slate-200 p-3 flex-shrink-0">
+        <form id="chat-form" onsubmit="handleMessageSubmit(event)" class="relative">
+          <div class="flex items-end gap-1.5 bg-slate-50 border border-slate-300 focus-within:border-gov-600 focus-within:ring-2 focus-within:ring-gov-100 rounded-xl p-1.5 transition-all shadow-inner">
+            
+            <!-- Voice Input Button -->
+            <button 
+              id="mic-btn"
+              type="button" 
+              onclick="toggleVoiceInput()"
+              title="Speak in your local language"
+              class="p-2 text-slate-500 hover:text-gov-700 hover:bg-gov-50 rounded-lg transition-colors flex-shrink-0 focus:outline-none"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/>
+              </svg>
+            </button>
+
+            <!-- Text Input Area -->
+            <textarea 
+              id="user-input"
+              rows="1" 
+              placeholder="Ask about PM-KISAN, PMFBY, KUSUM, Soil Health..." 
+              class="w-full bg-transparent text-xs text-charcoal-900 placeholder:text-slate-400 focus:outline-none resize-none py-1.5 px-1 max-h-24 leading-normal"
+              onkeydown="handleTextareaKeydown(event)"
+              oninput="autoResizeTextarea(this)"
+            ></textarea>
+
+            <!-- Send Action Button -->
+            <button 
+              id="send-btn"
+              type="submit" 
+              title="Send question to KisanGuard"
+              class="p-2 bg-gov-700 hover:bg-gov-800 active:bg-gov-900 text-white rounded-lg transition-colors flex-shrink-0 shadow-sm focus:outline-none focus:ring-2 focus:ring-gov-500"
+            >
+              <svg class="w-4 h-4 transform rotate-90" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+              </svg>
+            </button>
+          </div>
+        </form>
+
+        <!-- Official Disclaimer / Trust Micro-statement -->
+        <div class="mt-2 flex items-center justify-between text-[10px] text-slate-400 px-1 font-medium">
+          <span class="flex items-center gap-1">
+            <svg class="w-3 h-3 text-gov-600" fill="currentColor" viewBox="0 0 12 12"><path d="M6 1a5 5 0 100 10A5 5 0 006 1zm0 2a.75.75 0 110 1.5.75.75 0 010-1.5zm.75 6h-1.5V5.5h1.5V9z"/></svg>
+            Answers grounded in official scheme documents
+          </span>
+          <span class="text-slate-400">MoA&FW AI RAG</span>
+        </div>
+      </footer>
+
+    </section>
+
+    <!-- FLOATING CHAT LAUNCHER BUTTON (Bottom-Right Corner) -->
+    <div class="flex items-center gap-3">
+      <!-- Tooltip / Callout Pill (Subtle hint for first-time visitors) -->
+      <div id="launcher-tooltip" class="bg-gov-950 text-white text-xs px-3 py-1.5 rounded-full shadow-lg border border-gov-700 flex items-center gap-2 transition-opacity duration-300">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="font-medium">Need Scheme Help? Ask AI</span>
+        <button onclick="document.getElementById('launcher-tooltip').style.display='none'" class="text-slate-400 hover:text-white ml-1">✕</button>
+      </div>
+
+      <!-- Compact Floating Launcher Button -->
+      <button 
+        id="chatbot-launcher" 
+        type="button" 
+        onclick="toggleChatbot()"
+        aria-label="Open KisanGuard Scheme Assistant" 
+        class="w-14 h-14 rounded-2xl bg-gradient-to-br from-gov-800 to-gov-900 hover:from-gov-700 hover:to-gov-800 text-white shadow-floating flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 focus:outline-none focus:ring-4 focus:ring-gov-400/30 border border-gov-600/60 relative group"
+      >
+        <!-- Icon: Shield + Seedling Emblem -->
+        <svg id="launcher-icon-open" class="w-6 h-6 text-gov-200 group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          <path d="M12 8v8"/>
+          <path d="M9 13l3-3 3 3"/>
+        </svg>
+
+        <!-- Close 'X' icon (displayed when minimized state alternates) -->
+        <svg id="launcher-icon-close" class="hidden w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+
+        <!-- Verified Status Pip -->
+        <span class="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white"></span>
+        </span>
+      </button>
+    </div>
+
+  </div>
+
+  <!-- Interactive JavaScript logic for dynamic states & simulation -->
+  <script>
+    let isTtsActive = false;
+    let isVoiceListening = false;
+    let isPanelOpen = true;
+
+    function toggleChatbot() {
+      const panel = document.getElementById('chatbot-panel');
+      const iconOpen = document.getElementById('launcher-icon-open');
+      const iconClose = document.getElementById('launcher-icon-close');
+      const tooltip = document.getElementById('launcher-tooltip');
+
+      isPanelOpen = !isPanelOpen;
+      if (isPanelOpen) {
+        panel.classList.remove('hidden', 'opacity-0', 'scale-95');
+        panel.classList.add('flex', 'opacity-100', 'scale-100');
+        iconOpen.classList.remove('hidden');
+        iconClose.classList.add('hidden');
+        if (tooltip) tooltip.style.display = 'none';
+      } else {
+        panel.classList.add('hidden', 'opacity-0', 'scale-95');
+        panel.classList.remove('flex', 'opacity-100', 'scale-100');
+        iconOpen.classList.add('hidden');
+        iconClose.classList.remove('hidden');
+      }
+    }
+
+    function toggleTts() {
+      isTtsActive = !isTtsActive;
+      const ttsLabel = document.getElementById('tts-label');
+      const ttsToggle = document.getElementById('tts-toggle');
+      if (isTtsActive) {
+        ttsToggle.classList.add('bg-gov-50', 'border-gov-400', 'text-gov-800');
+        ttsLabel.innerText = 'Audio: ON';
+      } else {
+        ttsToggle.classList.remove('bg-gov-50', 'border-gov-400', 'text-gov-800');
+        ttsLabel.innerText = 'Voice Readout';
+      }
+    }
+
+    function toggleVoiceInput() {
+      const voiceOverlay = document.getElementById('voice-overlay');
+      const micBtn = document.getElementById('mic-btn');
+      
+      isVoiceListening = !isVoiceListening;
+      if (isVoiceListening) {
+        voiceOverlay.classList.remove('hidden');
+        micBtn.classList.add('text-gov-700', 'bg-gov-100');
+        // Simulated automatic stop after 4 seconds
+        setTimeout(() => {
+          if (isVoiceListening) {
+            stopVoiceInput();
+            sendQuickPrompt('What is the subsidy percentage under PM-KUSUM for solar agriculture pumps?');
+          }
+        }, 3800);
+      } else {
+        stopVoiceInput();
+      }
+    }
+
+    function stopVoiceInput() {
+      isVoiceListening = false;
+      document.getElementById('voice-overlay').classList.add('hidden');
+      document.getElementById('mic-btn').classList.remove('text-gov-700', 'bg-gov-100');
+    }
+
+    function autoResizeTextarea(textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = (textarea.scrollHeight) + 'px';
+    }
+
+    function handleTextareaKeydown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleMessageSubmit(e);
+      }
+    }
+
+    function sendQuickPrompt(promptText) {
+      const input = document.getElementById('user-input');
+      input.value = promptText;
+      handleMessageSubmit(new Event('submit'));
+    }
+
+    function handleMessageSubmit(e) {
+      if (e) e.preventDefault();
+      const input = document.getElementById('user-input');
+      const text = input.value.trim();
+      if (!text) return;
+
+      const container = document.getElementById('chat-messages');
+      const loading = document.getElementById('loading-state');
+
+      // Append User message
+      const userMessageDiv = document.createElement('div');
+      userMessageDiv.className = 'flex justify-end';
+      const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      userMessageDiv.innerHTML = `
+        <div class="max-w-[85%] bg-gov-800 text-white text-xs px-3.5 py-2.5 rounded-2xl rounded-tr-xs shadow-sm leading-relaxed">
+          <p>${escapeHTML(text)}</p>
+          <span class="text-[10px] text-gov-200/80 block text-right mt-1 font-mono">${timeString} · Sent</span>
+        </div>
+      `;
+      container.insertBefore(userMessageDiv, loading);
+
+      // Clear input
+      input.value = '';
+      input.style.height = 'auto';
+
+      // Show loading indicator & scroll
+      loading.classList.remove('hidden');
+      container.scrollTop = container.scrollHeight;
+
+      // Simulate RAG answer synthesis after 1.2s
+      setTimeout(() => {
+        loading.classList.add('hidden');
+        renderSimulatedResponse(text);
+        container.scrollTop = container.scrollHeight;
+      }, 1200);
+    }
+
+    function renderSimulatedResponse(prompt) {
+      const container = document.getElementById('chat-messages');
+      const loading = document.getElementById('loading-state');
+      const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      let schemeTitle = "Agricultural Scheme Official Retrieval";
+      let summaryText = "Information retrieved from the Ministry of Agriculture & Farmers Welfare repository.";
+      let keyPoints = [
+        "Eligibility verified against Central Scheme Guidelines.",
+        "Applications must be authenticated via Aadhaar & Jan Samarth portal.",
+        "Direct Benefit Transfer (DBT) deposited directly into registered Aadhaar bank account."
+      ];
+      let citationDoc = "Ministry Operational Manual 2023-24";
+      let citationPage = "Sec. 4";
+
+      if (prompt.toLowerCase().includes('kusum') || prompt.toLowerCase().includes('solar')) {
+        schemeTitle = "PM-KUSUM (Component-B) Solar Agriculture Pumps";
+        summaryText = "Under PM-KUSUM Component B, farmers can install standalone solar agriculture pumps with significant central and state subsidies.";
+        keyPoints = [
+          "Subsidy breakdown: 30% Central Financial Assistance + 30% State Govt subsidy.",
+          "Farmer share: Only 40% (30% can be financed through bank loans).",
+          "Eligibility: Individual farmers, Water User Associations, and FPOs."
+        ];
+        citationDoc = "MNRE Guidelines for PM-KUSUM Scheme (Order 32/645)";
+        citationPage = "Page 9";
+      } else if (prompt.toLowerCase().includes('pmfby') || prompt.toLowerCase().includes('insurance')) {
+        schemeTitle = "Pradhan Mantri Fasal Bima Yojana (PMFBY)";
+        summaryText = "PMFBY provides comprehensive risk insurance coverage for crops against non-preventable natural perils.";
+        keyPoints = [
+          "Farmer Premium: Max 2% for Kharif, 1.5% for Rabi, and 5% for commercial/horticultural crops.",
+          "Intimation timeline: Crop loss must be reported within 72 hours via Crop Insurance App.",
+          "Settlement: Direct transfer via National Crop Insurance Portal."
+        ];
+        citationDoc = "PMFBY Revised Operational Guidelines";
+        citationPage = "Clause 14.3";
+      } else if (prompt.toLowerCase().includes('soil')) {
+        schemeTitle = "Soil Health Card Scheme";
+        summaryText = "Soil Health Cards provide crop-wise nutrient status and dosage recommendations for 12 essential parameters (N, P, K, S, micronutrients, pH, EC, OC).";
+        keyPoints = [
+          "Issued free of cost to all farmers once every 3 years.",
+          "Soil sample collected at 2.5 ha grid (irrigated) and 10 ha (rainfed).",
+          "Helps reduce fertilizer costs by an estimated 15-20%."
+        ];
+        citationDoc = "Soil Health Card Scheme Implementation Guidelines";
+        citationPage = "Sec. 2";
+      }
+
+      const aiDiv = document.createElement('div');
+      aiDiv.className = 'flex items-start gap-2.5';
+      aiDiv.innerHTML = `
+        <div class="w-7 h-7 rounded-lg bg-gov-800 text-white flex-shrink-0 flex items-center justify-center font-bold text-xs shadow-sm">
+          KG
+        </div>
+        <div class="max-w-[90%] space-y-2">
+          <div class="bg-white border border-slate-200/90 rounded-2xl rounded-tl-sm p-3.5 text-xs text-charcoal-800 shadow-subtle leading-relaxed">
+            <div class="flex items-center justify-between pb-2 mb-2 border-b border-slate-100">
+              <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-gov-800 bg-gov-50 px-2 py-0.5 rounded-md border border-gov-200/70">
+                <svg class="w-3 h-3 text-gov-600" fill="currentColor" viewBox="0 0 12 12"><path d="M10.28 2.28L3.989 8.575 1.705 6.305a1 1 0 00-1.41 1.41l3 3a1 1 0 001.414 0l7-7a1 1 0 00-1.414-1.414z"/></svg>
+                ${schemeTitle}
+              </span>
+              <span class="text-[10px] text-slate-400 font-mono">Confidence: 98.7%</span>
+            </div>
+
+            <p class="mb-2 text-charcoal-700">${summaryText}</p>
+
+            <div class="bg-slate-50 p-2.5 rounded-lg border border-slate-200/80 mb-2">
+              <span class="font-semibold text-gov-900 block mb-1">Key Official Facts:</span>
+              <ul class="list-disc list-inside space-y-1 text-slate-600 pl-1 text-[11px]">
+                ${keyPoints.map(pt => `<li>${pt}</li>`).join('')}
+              </ul>
+            </div>
+
+            <details class="source-details group mt-2 pt-2 border-t border-slate-100" open>
+              <summary class="flex items-center justify-between cursor-pointer list-none text-[11px] font-semibold text-gov-800 hover:text-gov-900 select-none py-1">
+                <span class="flex items-center gap-1.5">
+                  <svg class="w-3.5 h-3.5 text-gov-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                  </svg>
+                  <span>Grounding Source • Verified Document</span>
+                </span>
+                <svg class="w-3 h-3 text-slate-400 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </summary>
+              <div class="mt-1.5 p-2 rounded bg-slate-50 border border-slate-200 text-[11px] text-slate-600 flex items-center justify-between">
+                <div>
+                  <span class="font-medium text-slate-800 block">${citationDoc}</span>
+                  <span class="text-[10px] text-slate-500">Government of India scheme documentation</span>
+                </div>
+                <span class="text-[9px] bg-slate-200 text-slate-700 px-1 py-0.5 rounded font-mono">${citationPage}</span>
+              </div>
+            </details>
+          </div>
+          <div class="text-[10px] text-slate-400 px-1 font-mono flex items-center justify-between">
+            <span>Verified ministerial response</span>
+            <span>${timeString}</span>
+          </div>
+        </div>
+      `;
+      container.insertBefore(aiDiv, loading);
+    }
+
+    function resetToWelcome() {
+      const container = document.getElementById('chat-messages');
+      const messages = container.querySelectorAll('.flex.justify-end, .flex.items-start.gap-2\\.5:not(#loading-state):not(#error-card)');
+      // Keep only initial welcome block
+      messages.forEach((msg, idx) => {
+        if (idx > 0) msg.remove(); // keep welcome
+      });
+    }
+
+    function copyReplyText(btn) {
+      btn.innerHTML = `<svg class="w-3.5 h-3.5 text-gov-600" fill="currentColor" viewBox="0 0 12 12"><path d="M10.28 2.28L3.989 8.575 1.705 6.305a1 1 0 00-1.41 1.41l3 3a1 1 0 001.414 0l7-7a1 1 0 00-1.414-1.414z"/></svg>`;
+      setTimeout(() => {
+        btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>`;
+      }, 1500);
+    }
+
+    function escapeHTML(str) {
+      return str.replace(/[&<>'"]/g, 
+        tag => ({
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          "'": '&#39;',
+          '"': '&quot;'
+        }[tag] || tag)
+      );
+    }
+  </script>
+</body>
+</html>
