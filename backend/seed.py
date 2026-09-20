@@ -146,26 +146,6 @@ def seed_users(db: SessionLocal) -> Dict[str, User]:
         db.refresh(farmer)
     users["farmer"] = farmer
 
-    # Additional test farmers for multi-applicant scenarios
-    for i in range(2, 6):
-        email = f"farmer{i}@test.com"
-        u = db.query(User).filter(User.email == email).first()
-        if not u:
-            u = User(
-                email=email,
-                password_hash=hash_password("Farmer@123"),
-                full_name=f"Test Farmer {i}",
-                mobile_number=f"987654321{i}",
-                date_of_birth=datetime.date(1982 + i, 3, 10),
-                gender="Male" if i % 2 == 0 else "Female",
-                category="General",
-                role="USER",
-            )
-            db.add(u)
-            db.commit()
-            db.refresh(u)
-        users[f"farmer_{i}"] = u
-
     return users
 
 
@@ -838,10 +818,37 @@ def seed_applications(db: SessionLocal, users: Dict[str, User]):
 
         sub_time = now - datetime.timedelta(days=20 - spec["id"])
 
+        # Determine the distinct claimant user for this application
+        if spec["id"] == 1:
+            claimant_user = users["farmer"]
+        else:
+            applicant_email = f"farmer{spec['id']}@test.com"
+            claimant_user = db.query(User).filter(User.email == applicant_email).first()
+            if not claimant_user:
+                claimant_user = User(
+                    email=applicant_email,
+                    password_hash=hash_password("Farmer@123"),
+                    full_name=spec["farmer_name"],
+                    mobile_number=spec["mobile"],
+                    date_of_birth=spec["dob"],
+                    gender=spec["gender"],
+                    category="General",
+                    role="USER",
+                )
+                db.add(claimant_user)
+                db.commit()
+                db.refresh(claimant_user)
+            else:
+                claimant_user.full_name = spec["farmer_name"]
+                claimant_user.mobile_number = spec["mobile"]
+                claimant_user.date_of_birth = spec["dob"]
+                claimant_user.gender = spec["gender"]
+                db.commit()
+
         # 1. Create Application
         app = Application(
             id=spec["id"],
-            user_id=farmer.id,
+            user_id=claimant_user.id,
             scheme_code="PM_KISAN",
             status=spec["status"],
             submitted_at=sub_time,
