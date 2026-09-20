@@ -5,14 +5,14 @@
 See: `.planning/PROJECT.md` (updated 2026-09-19)
 
 **Core value:** Deterministic and statistical anomaly detection on agricultural subsidy applications that reliably flags fraudulent claims with high confidence and explainable rationale while keeping internal fraud scoring invisible to applicants.  
-**Current focus:** Phase 8 Complete — Supervised XGBoost Calibration & TreeSHAP Verified ✓  
-**Status:** All 8 Phases Complete ✓
+**Current focus:** Phase 9: Land Document OCR & Automated ID Verification — Planning Complete, Ready for Execution  
+**Status:** In Progress (Phase 9 Planned)
 
 ## Progress
 
-- **Phases:** 8 of 8 completed
-- **v1 Requirements:** 39 of 39 verified (34 core + 5 XGBoost)
-- **Current Phase:** None (All Phases Verified)
+- **Phases:** 8 of 9 completed
+- **v1 Requirements:** 39 of 44 verified (34 core + 5 XGBoost; 5 OCR planned)
+- **Current Phase:** Phase 9 (Land Document OCR & Automated ID Verification)
 
 ## Phase Breakdown
 
@@ -24,6 +24,7 @@ See: `.planning/PROJECT.md` (updated 2026-09-19)
 - [x] **Phase 6: Admin Anomaly Review Console UI** — Officer review dashboard, charts, anomaly dossier inspector, decision actions
 - [x] **Phase 7: Master Seed Data & Live Demo Verification** — Realistic seed fixtures (20 apps, master records) & automated test suite
 - [x] **Phase 8: Supervised XGBoost Risk Calibration & SHAP Explainability Engine** — 24-dim feature extractor, 2-stage hybrid scoring, strict statutory override ($Risk=100$), native TreeSHAP (<2ms), Dual Risk Meters, SHAP horizontal bar chart, ML surge badging and filtering
+- [ ] **Phase 9: Land Document OCR & Automated ID Verification** — Offline multi-format OCR (`pymupdf`/`easyocr`), Land Document/Parcel ID entity parsing, cross-reconciliation, `LAND_DOC_ID_MISMATCH` anomaly flag, and Admin Land Deed OCR Dossier UI
 
 ---
-*Last updated: 2026-09-20 upon Phase 8 completion*
+*Last updated: 2026-09-20 upon Phase 9 planning completion*

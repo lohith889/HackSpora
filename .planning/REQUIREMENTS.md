@@ -61,12 +61,25 @@
 - [x] **SEED-03**: Seeder provisions 20 sample applications covering all risk tiers (10 Low Risk, 5 Medium Risk, 5 High Risk) and executes the anomaly pipeline on all.
 - [x] **SEED-04**: End-to-end verification script or demo flow validates both farmer submission and admin review workflows.
 
+### Supervised XGBoost Risk Calibration & SHAP Explainability (Phase 8)
+- [x] **XGB-01**: Backend environment incorporates `xgboost>=2.0.0` and `shap>=0.44.0` for sub-10ms tabular inference.
+- [x] **XGB-02**: Multi-engine feature extractor serializes claims and engine signals into a normalized 24-dimensional feature vector.
+- [x] **XGB-03**: Two-stage scoring pipeline enforces hard statutory exclusion overrides ($Risk = 100$) while computing non-linear risk probability.
+- [x] **XGB-04**: TreeSHAP explainer computes exact feature contribution values and extracts the top 3 predictive drivers.
+- [x] **XGB-05**: Admin Review Console renders dual scores (Rule vs. ML), SHAP waterfall/bar charts, and automated divergence badges.
+
+### Land Document OCR & Automated ID Verification (Phase 9)
+- [ ] **OCR-01**: Multi-format Land Document Text Extractor supporting digital PDFs (`pymupdf`/`pypdf`) and raster images (`Pillow`/`easyocr`) with 100% offline execution.
+- [ ] **OCR-02**: Land Registry Entity Parser extracting Document IDs, Khasra/Plot numbers, Khata numbers, Owner Name, and Land Area using tailored regex heuristics.
+- [ ] **OCR-03**: Deterministic Cross-Verification Engine reconciling extracted document entities against declared claims and land master registry.
+- [ ] **OCR-04**: Land Engine Anomaly Integration triggering `LAND_DOC_ID_MISMATCH` (High severity, 40 score) and `LAND_DOC_OCR_UNREADABLE` (Medium severity, 20 score).
+- [ ] **OCR-05**: Scheme Officer Console Land Deed OCR Authenticity Dossier with side-by-side comparison, match badges, document view/download, and raw text preview.
+
 ## v2 Requirements
 
 - **NOTF-01**: Automated SMS/WhatsApp notifications to farmers regarding status updates and document requests.
 - **SATE-01**: Integration with Sentinel/Bhuvan satellite imagery APIs for dynamic crop validation.
 - **ML-01**: Isolation Forest unsupervised anomaly detection models trained on historical nationwide application clusters.
-- **OCR-01**: Automatic OCR text extraction and signature verification on uploaded land deed PDF files.
 
 ## Out of Scope
 
@@ -100,10 +113,13 @@
 | ENG-05 | Phase 3 | Complete |
 | ENG-06 | Phase 3 | Complete |
 | ENG-07 | Phase 3 | Complete |
+| ENG-08 | Phase 3 | Complete |
 | RISK-01 | Phase 4 | Complete |
 | RISK-02 | Phase 4 | Complete |
 | RISK-03 | Phase 4 | Complete |
 | RISK-04 | Phase 4 | Complete |
+| RISK-05 | Phase 4 | Complete |
+| EVAL-01 | Phase 4 | Complete |
 | FARM-01 | Phase 5 | Complete |
 | FARM-02 | Phase 5 | Complete |
 | FARM-03 | Phase 5 | Complete |
@@ -117,12 +133,22 @@
 | SEED-02 | Phase 7 | Complete |
 | SEED-03 | Phase 7 | Complete |
 | SEED-04 | Phase 7 | Complete |
+| XGB-01 | Phase 8 | Complete |
+| XGB-02 | Phase 8 | Complete |
+| XGB-03 | Phase 8 | Complete |
+| XGB-04 | Phase 8 | Complete |
+| XGB-05 | Phase 8 | Complete |
+| OCR-01 | Phase 9 | Planned |
+| OCR-02 | Phase 9 | Planned |
+| OCR-03 | Phase 9 | Planned |
+| OCR-04 | Phase 9 | Planned |
+| OCR-05 | Phase 9 | Planned |
 
 **Coverage:**
-- v1 requirements: 34 total
-- Mapped to phases: 34
+- v1 requirements: 44 total (34 core + 5 XGBoost + 5 OCR)
+- Mapped to phases: 44
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-09-19*  
-*Last updated: 2026-09-19 after initial definition*
+*Last updated: 2026-09-20 after Phase 9 definition*

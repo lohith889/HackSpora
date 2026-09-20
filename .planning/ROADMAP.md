@@ -11,7 +11,8 @@
 - [x] Phase 5: Farmer Application Portal UI
 - [x] Phase 6: Admin Anomaly Review Console UI
 - [x] Phase 7: Master Seed Data & Live Demo Verification
-- [ ] Phase 8: Supervised XGBoost Risk Calibration & SHAP Explainability Engine
+- [x] Phase 8: Supervised XGBoost Risk Calibration & SHAP Explainability Engine
+- [ ] Phase 9: Land Document OCR & Automated ID Verification
 
 | Phase | Name | Goal | Requirements | Criteria |
 |---|---|---|---|---|
@@ -23,6 +24,7 @@
 | 6 | Admin Anomaly Review Console UI | Build administrative dashboard with KPI metrics, distribution charts, searchable applications table, deep anomaly dossier modal, officer decision workflow, and CSV export | ADM-01, ADM-02, ADM-03, ADM-04, ADM-05, ADM-06 | 6 |
 | 7 | Master Seed Data & Live Demo Verification | Provision realistic seed datasets (users, master registries, 20 diverse risk applications) and run end-to-end verification tests | SEED-01, SEED-02, SEED-03, SEED-04 | 4 |
 | 8 | Supervised XGBoost Risk Engine | Implement two-stage hybrid XGBoost risk calibration model with SHAP feature attributions on multi-engine vector alongside statutory rules | XGB-01, XGB-02, XGB-03, XGB-04, XGB-05 | 5 |
+| 9 | Land Document OCR Engine | Automated OCR text extraction, Land Document ID & Khasra parsing, cross-reconciliation with application claims, and Land Engine anomaly flags | OCR-01, OCR-02, OCR-03, OCR-04, OCR-05 | 5 |
 
 ---
 
@@ -123,3 +125,16 @@
 3. `XGB-03`: Two-stage scoring pipeline enforces hard statutory exclusion overrides ($Risk = 100$) while computing non-linear interaction risk probability via trained XGBoost booster.
 4. `XGB-04`: TreeSHAP explainer computes exact feature contribution values and extracts the top 3 predictive drivers for administrative auditability.
 5. `XGB-05`: Admin Application Detail UI renders dual scores (Rule vs. ML), SHAP waterfall/bar charts, and automated divergence badges.
+
+### Phase 9: Land Document OCR & Automated ID Verification
+**Goal:** Implement automated, offline Land Document OCR to extract Document IDs, Khasra/Plot numbers, and Khata numbers from uploaded deeds (PDF/JPG/PNG), perform cross-reconciliation against application claims and land records, integrate with the Land Anomaly Engine, and display a comprehensive OCR Authenticity Dossier in the Scheme Officer Console.  
+**Mode:** mvp  
+**Status:** In Progress  
+**Requirements:** OCR-01, OCR-02, OCR-03, OCR-04, OCR-05  
+**Success Criteria:**
+1. `OCR-01`: Backend extracts textual content from digital PDFs (via `pymupdf` / `pypdf`) and raster images (via `Pillow` / `easyocr`) with sub-second latency and 100% offline execution.
+2. `OCR-02`: Entity parser extracts Land Document ID / Registration Ref, Khasra/Plot number, Khata number, Owner Name, and Land Area using tailored regex heuristics.
+3. `OCR-03`: Deterministic reconciliation engine compares extracted entities against application claims and master records, computing `ocr_match_status` (`MATCHED`, `MISMATCH`, `UNVERIFIED`) and evidential confidence.
+4. `OCR-04`: `LandEngine` evaluates OCR outcomes, triggering `LAND_DOC_ID_MISMATCH` (High severity, 40 score) on conflicting document IDs, and `LAND_DOC_OCR_UNREADABLE` (Medium severity, 20 score) on illegible files.
+5. `OCR-05`: Scheme Officer Console renders dedicated Land Deed OCR Dossier with side-by-side claim vs. extracted ID comparison, match badges, document preview/download, and raw text preview.
+
